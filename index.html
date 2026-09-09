@@ -1017,6 +1017,42 @@
   </div>
 
   <!-- ===============================================================
+       TELA DE BLOQUEIO DE MENSALIDADE (VERCEL PAYWALL)
+       =============================================================== -->
+  <div class="paywall-lock-overlay" id="paywall-lock-overlay" style="display: none;">
+    <div class="paywall-card">
+      <div class="lock-icon-wrapper">
+        <i class="fa-solid fa-lock"></i>
+      </div>
+      <h2>Acesso Temporariamente Suspenso</h2>
+      <div class="paywall-reason" id="lock-reason-text">
+        A mensalidade referente a este ciclo está pendente de regularização.
+      </div>
+
+      <div class="paywall-pix-box">
+        <div class="paywall-pix-label">Chave PIX para Regularização <span id="lock-pix-type">(E-mail)</span></div>
+        <div class="paywall-pix-value" id="lock-pix-key">brisasofc@gmail.com</div>
+        <button type="button" class="btn btn-outline btn-sm" id="btn-copy-license-pix" style="width: 100%;">
+          <i class="fa-solid fa-copy"></i> Copiar Chave PIX
+        </button>
+      </div>
+
+      <div class="paywall-actions">
+        <a href="#" target="_blank" class="btn btn-whatsapp" id="btn-lock-whatsapp">
+          <i class="fa-brands fa-whatsapp"></i> Enviar Comprovante no WhatsApp
+        </a>
+        <button type="button" class="btn btn-primary" id="btn-recheck-license">
+          <i class="fa-solid fa-rotate-right"></i> Já Efetuei o Pagamento (Verificar)
+        </button>
+      </div>
+
+      <div class="dev-unlock-footer">
+        <a href="#" id="link-dev-emergency-unlock">Área do Desenvolvedor: Desbloqueio de Emergência</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================================================
        TELA DE LOGIN FIREBASE (MODERNA E RESPONSIVA)
        =============================================================== -->
   <div class="login-overlay" id="login-overlay" style="display: none;">
@@ -1073,6 +1109,7 @@
   <!-- Scripts -->
   <script src="js/firebase-config.js"></script>
   <script src="js/auth.js"></script>
+  <script src="js/license.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/calendar.js"></script>

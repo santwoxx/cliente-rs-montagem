@@ -14,6 +14,9 @@ class App {
     this.bindSettings();
     this.bindGlobalFAB();
 
+    // Initialize license & paywall controller
+    if (window.licenseController) window.licenseController.init();
+
     // Initialize all sub-modules
     if (window.authController) window.authController.init();
     window.calendarController.init();

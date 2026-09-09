@@ -41,14 +41,16 @@ Sistema web responsivo para gestão operacional e financeira de montadores de m�
 
 ---
 
-## 📦 Como Rodar Localmente
+## 🔒 Bloqueio Mensal & Licença (Variáveis de Ambiente na Vercel)
 
-1. Clone o repositório:
-   ```bash
-   git clone https://github.com/santwoxx/cliente-rs-montagem.git
-   ```
-2. Abra o arquivo `index.html` em qualquer navegador web ou suba em um servidor HTTP local:
-   ```bash
-   python -m http.server 8080
-   ```
-3. Acesse `http://localhost:8080` no navegador.
+O sistema possui uma trava de segurança mensal que impede o uso do aplicativo caso o cliente não pague a mensalidade. Você pode controlar tudo pelo painel da Vercel em **Settings -> Environment Variables**:
+
+| Variável | Valor Padrão / Exemplo | Descrição |
+| :--- | :--- | :--- |
+| `SYSTEM_PAID_UNTIL` | `2026-10-09` | **Data limite paga (YYYY-MM-DD)**. O sistema bloqueia automaticamente a partir dessa data. Para renovar por mais um mês após o pagamento, basta alterar para o mês seguinte (ex: `2026-11-09`). |
+| `SYSTEM_STATUS` | `AUTO` | `AUTO` (bloqueia na data programada), `ACTIVE` (força liberação), ou `BLOCKED` (bloqueia na hora). |
+| `DEV_PIX_KEY` | `brisasofc@gmail.com` | Sua chave PIX que aparecerá para o cliente fazer o pagamento. |
+| `DEV_PIX_TYPE` | `E-mail` | Tipo da sua chave PIX (E-mail, Telefone, CPF ou CNPJ). |
+| `DEV_WHATSAPP` | `5511999999999` | Seu WhatsApp para o cliente enviar o comprovante com 1 clique. |
+| `DEV_MASTER_PASSWORD` | `desbloquear2026` | Senha mestra de emergência para você destravar o sistema direto na tela se precisar. |
+
