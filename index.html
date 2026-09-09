@@ -1,0 +1,1085 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="description" content="Sistema de Gestão e Agenda Profissional para Montadores de Móveis com Controle Financeiro Completo e Orçamentos para WhatsApp.">
+  <meta name="theme-color" content="#FF5E1E">
+  <title>RS Montagens | Sistema do Montador de Móveis</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+  <!-- Custom CSS Files -->
+  <link rel="stylesheet" href="css/main.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/calendar.css">
+  <link rel="stylesheet" href="css/detail.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/print.css">
+
+  <!-- Firebase SDK v10 (compat mode) -->
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.13.0/firebase-firestore-compat.js"></script>
+
+  <!-- Chart.js via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+
+  <div class="app-layout">
+    <!-- Desktop Sidebar -->
+    <aside class="app-sidebar">
+      <div class="sidebar-header">
+        <div class="brand-icon">
+          <i class="fa-solid fa-screwdriver-wrench"></i>
+        </div>
+        <div class="brand-info">
+          <h1>RS Montagens</h1>
+          <span>Montador PRO</span>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item" data-view-target="view-inicio">
+          <i class="fa-solid fa-house"></i>
+          <span>Início</span>
+        </button>
+        <button class="nav-item active" data-view-target="view-agenda">
+          <i class="fa-regular fa-calendar-days"></i>
+          <span>Agenda</span>
+        </button>
+        <button class="nav-item" data-view-target="view-financeiro">
+          <i class="fa-solid fa-wallet"></i>
+          <span>Financeiro</span>
+        </button>
+        <button class="nav-item" data-view-target="view-clientes">
+          <i class="fa-solid fa-users"></i>
+          <span>Clientes</span>
+        </button>
+        <button class="nav-item" data-view-target="view-orcamentos">
+          <i class="fa-solid fa-calculator"></i>
+          <span>Orçamentos</span>
+        </button>
+        <button class="nav-item" data-view-target="view-ajustes">
+          <i class="fa-solid fa-gear"></i>
+          <span>Ajustes</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="pro-card" style="display: flex; align-items: center; justify-content: space-between;">
+          <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+            <div class="pro-avatar">RS</div>
+            <div class="pro-details">
+              <div class="pro-name">Rodrigo Silva</div>
+              <div class="pro-role">Montador Autônomo</div>
+            </div>
+          </div>
+          <button class="btn-logout-trigger" title="Sair da Conta" style="background: none; border: none; color: #94A3B8; cursor: pointer; padding: 6px; font-size: 1.1rem; transition: var(--transition);">
+            <i class="fa-solid fa-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Application -->
+    <main class="app-main">
+      <!-- App Header -->
+      <header class="app-header">
+        <div class="header-title-area">
+          <h2 id="header-title"><i class="fa-regular fa-calendar-days" style="color: var(--primary);"></i> Agenda</h2>
+          <span class="header-subtitle" id="header-subtitle">Visualize seus serviços por data</span>
+        </div>
+
+        <div class="header-actions">
+          <div class="quick-stats-pill" id="header-quick-stat">
+            <span class="dot"></span> Carregando resumo...
+          </div>
+          <button class="btn btn-primary btn-sm" onclick="window.servicesController.openNewServiceModal(window.calendarController.selectedDate)">
+            <i class="fa-solid fa-plus"></i> Novo Serviço
+          </button>
+          <button class="btn btn-outline btn-sm btn-logout-trigger" title="Sair da Conta">
+            <i class="fa-solid fa-right-from-bracket"></i> <span class="hide-mobile">Sair</span>
+          </button>
+        </div>
+      </header>
+
+      <!-- Content Views Container -->
+      <div class="content-body">
+
+        <!-- ===============================================================
+             VIEW 1: INÍCIO (DASHBOARD)
+             =============================================================== -->
+        <section id="view-inicio" class="app-view">
+          <!-- KPI Stats Grid -->
+          <div class="grid-auto" style="margin-bottom: 24px;">
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Faturamento Mês</span>
+                <div class="stat-icon icon-green"><i class="fa-solid fa-sack-dollar"></i></div>
+              </div>
+              <div class="stat-value" id="dash-kpi-faturamento">R$ 0,00</div>
+              <div class="stat-subtitle trend-up"><i class="fa-solid fa-arrow-trend-up"></i> Recebido no período</div>
+            </div>
+
+            <div class="stat-card stat-card-highlight">
+              <div class="stat-header">
+                <span class="stat-title">Lucro Líquido Mês</span>
+                <div class="stat-icon icon-green"><i class="fa-solid fa-wallet"></i></div>
+              </div>
+              <div class="stat-value" id="dash-kpi-lucro">R$ 0,00</div>
+              <div class="stat-subtitle">Já descontando <span id="dash-kpi-gastos">R$ 0,00</span> de material</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">A Receber</span>
+                <div class="stat-icon icon-orange"><i class="fa-solid fa-hourglass-half"></i></div>
+              </div>
+              <div class="stat-value" id="dash-kpi-pendente">R$ 0,00</div>
+              <div class="stat-subtitle"><i class="fa-solid fa-clock"></i> Agendamentos pendentes</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Concluídos</span>
+                <div class="stat-icon icon-blue"><i class="fa-solid fa-circle-check"></i></div>
+              </div>
+              <div class="stat-value" id="dash-kpi-concluidos">0</div>
+              <div class="stat-subtitle">Montagens finalizadas</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Agendados</span>
+                <div class="stat-icon icon-red"><i class="fa-solid fa-calendar-check"></i></div>
+              </div>
+              <div class="stat-value" id="dash-kpi-agendados">0</div>
+              <div class="stat-subtitle">Próximos serviços</div>
+            </div>
+          </div>
+
+          <!-- Quick Actions & Today's Schedule -->
+          <div class="grid-2">
+            <!-- Today's Schedule -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa-regular fa-calendar-check"></i> Montagens de Hoje (09/09)</h3>
+                <button class="btn btn-outline btn-sm" data-view-target="view-agenda">Ver Agenda Completa</button>
+              </div>
+              <div id="dash-today-services">
+                <!-- Injected via JS -->
+              </div>
+            </div>
+
+            <!-- Quick Shortcuts & Monthly Goal -->
+            <div>
+              <div class="card" style="margin-bottom: 24px;">
+                <div class="card-header">
+                  <h3 class="card-title"><i class="fa-solid fa-bullseye"></i> Meta Financeira do Mês</h3>
+                  <button class="btn btn-outline btn-sm" data-view-target="view-ajustes">Ajustar Meta</button>
+                </div>
+                <div class="progress-container">
+                  <div class="progress-header">
+                    <span id="fin-goal-text">Carregando...</span>
+                  </div>
+                  <div class="progress-track">
+                    <div class="progress-fill" id="fin-goal-progress" style="width: 0%;"></div>
+                  </div>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title"><i class="fa-solid fa-bolt"></i> Ações Rápidas</h3>
+                </div>
+                <div class="grid-2">
+                  <button class="btn btn-primary" onclick="window.servicesController.openNewServiceModal('2026-09-09')">
+                    <i class="fa-solid fa-calendar-plus"></i> Agendar Montagem
+                  </button>
+                  <button class="btn btn-success" onclick="window.financeController.openTransactionModal('receita')">
+                    <i class="fa-solid fa-circle-plus"></i> Lançar Entrada
+                  </button>
+                  <button class="btn btn-outline" onclick="window.financeController.openTransactionModal('despesa')">
+                    <i class="fa-solid fa-circle-minus" style="color: var(--danger);"></i> Lançar Despesa
+                  </button>
+                  <button class="btn btn-outline" data-view-target="view-orcamentos">
+                    <i class="fa-solid fa-calculator" style="color: var(--primary);"></i> Orçar no WhatsApp
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===============================================================
+             VIEW 2: AGENDA (VISUAL IDÊNTICO E APRIMORADO AO PRINT DO USUÁRIO)
+             =============================================================== -->
+        <section id="view-agenda" class="app-view active">
+          <div class="agenda-container-desktop">
+            <!-- Left Side: Calendar Card (screenshot match) -->
+            <div>
+              <div class="calendar-card">
+                <!-- Month Navigator -->
+                <div class="calendar-month-header">
+                  <button class="month-nav-btn" id="cal-prev-month" title="Mês Anterior">
+                    <i class="fa-solid fa-chevron-left"></i>
+                  </button>
+                  <div class="calendar-current-month" id="cal-month-title">Setembro 2026</div>
+                  <button class="month-nav-btn" id="cal-next-month" title="Próximo Mês">
+                    <i class="fa-solid fa-chevron-right"></i>
+                  </button>
+                </div>
+
+                <!-- Weekdays Row -->
+                <div class="calendar-weekdays">
+                  <span>D</span>
+                  <span>S</span>
+                  <span>T</span>
+                  <span>Q</span>
+                  <span>Q</span>
+                  <span>S</span>
+                  <span>S</span>
+                </div>
+
+                <!-- Days Grid -->
+                <div class="calendar-days-grid" id="cal-days-grid">
+                  <!-- Generated dynamically in calendar.js -->
+                </div>
+
+                <div class="calendar-legend-divider"></div>
+
+                <!-- Legend directly from user screenshot -->
+                <div class="calendar-legend">
+                  <div class="legend-item">
+                    <div class="legend-box concluido"></div>
+                    <span>Concluído</span>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-box agendado"></div>
+                    <span>Agendado</span>
+                  </div>
+                  <div class="legend-item">
+                    <div class="legend-box ambos"></div>
+                    <span>Ambos</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right Side: Services for Selected Date -->
+            <div>
+              <div class="selected-date-header">
+                <div class="selected-date-title" id="cal-selected-date-text">09/09/2026</div>
+                <div class="selected-date-badge" id="cal-selected-date-count">1 serviço</div>
+              </div>
+
+              <div class="day-services-list" id="cal-day-services-list">
+                <!-- Services Cards will be rendered here -->
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===============================================================
+             VIEW 3: FINANCEIRO (CONTROLE FINANCEIRO COMPLETO)
+             =============================================================== -->
+        <section id="view-financeiro" class="app-view">
+          <!-- Top Filter Bar -->
+          <div class="filter-bar">
+            <div class="filter-group">
+              <span style="font-weight: 700; font-size: 0.85rem; color: var(--text-muted); margin-right: 4px;">Período:</span>
+              <button class="pill-filter" data-finance-period="today">Hoje</button>
+              <button class="pill-filter" data-finance-period="week">7 Dias</button>
+              <button class="pill-filter active" data-finance-period="month">Este Mês</button>
+              <button class="pill-filter" data-finance-period="year">Este Ano</button>
+              <button class="pill-filter" data-finance-period="all">Tudo</button>
+            </div>
+            <div style="display: flex; gap: 10px;">
+              <button class="btn btn-success btn-sm" onclick="window.financeController.openTransactionModal('receita')">
+                <i class="fa-solid fa-circle-plus"></i> Nova Receita
+              </button>
+              <button class="btn btn-danger btn-sm" onclick="window.financeController.openTransactionModal('despesa')">
+                <i class="fa-solid fa-circle-minus"></i> Nova Despesa
+              </button>
+            </div>
+          </div>
+
+          <!-- Financial KPIs -->
+          <div class="grid-4" style="margin-bottom: 24px;">
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Saldo Líquido</span>
+                <div class="stat-icon icon-green"><i class="fa-solid fa-scale-balanced"></i></div>
+              </div>
+              <div class="stat-value" id="fin-saldo-liquido">R$ 0,00</div>
+              <div class="stat-subtitle">Lucro real em caixa</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Receitas (Entradas)</span>
+                <div class="stat-icon icon-blue"><i class="fa-solid fa-arrow-trend-up"></i></div>
+              </div>
+              <div class="stat-value" id="fin-total-receitas" style="color: var(--success-dark);">R$ 0,00</div>
+              <div class="stat-subtitle">Total recebido</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">Despesas (Saídas)</span>
+                <div class="stat-icon icon-red"><i class="fa-solid fa-arrow-trend-down"></i></div>
+              </div>
+              <div class="stat-value" id="fin-total-despesas" style="color: var(--danger-dark);">R$ 0,00</div>
+              <div class="stat-subtitle">Gastos operacionais</div>
+            </div>
+
+            <div class="stat-card">
+              <div class="stat-header">
+                <span class="stat-title">A Receber</span>
+                <div class="stat-icon icon-orange"><i class="fa-regular fa-clock"></i></div>
+              </div>
+              <div class="stat-value" id="fin-total-pendente">R$ 0,00</div>
+              <div class="stat-subtitle">Agendamentos futuros</div>
+            </div>
+          </div>
+
+          <!-- Financial Charts -->
+          <div class="grid-2" style="margin-bottom: 24px;">
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-chart-column"></i> Entradas vs Saídas Mensais</h3>
+              </div>
+              <div style="height: 280px; position: relative;">
+                <canvas id="chart-cashflow"></canvas>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-chart-pie"></i> Despesas por Categoria</h3>
+              </div>
+              <div style="height: 280px; position: relative;">
+                <canvas id="chart-category"></canvas>
+              </div>
+            </div>
+          </div>
+
+          <!-- Transaction List / Table -->
+          <div class="card">
+            <div class="card-header">
+              <h3 class="card-title"><i class="fa-solid fa-list-check"></i> Extrato de Lançamentos</h3>
+              <div class="filter-group">
+                <button class="pill-filter active" data-finance-type="all">Todos</button>
+                <button class="pill-filter" data-finance-type="receita">Receitas</button>
+                <button class="pill-filter" data-finance-type="despesa">Despesas</button>
+              </div>
+            </div>
+            <div class="table-responsive">
+              <table class="custom-table">
+                <thead>
+                  <tr>
+                    <th>Data</th>
+                    <th>Tipo</th>
+                    <th>Categoria</th>
+                    <th>Descrição</th>
+                    <th>Pagamento</th>
+                    <th>Valor</th>
+                    <th style="text-align: right;">Ações</th>
+                  </tr>
+                </thead>
+                <tbody id="fin-transactions-table-body">
+                  <!-- Rendered via JS -->
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===============================================================
+             VIEW 4: CLIENTES
+             =============================================================== -->
+        <section id="view-clientes" class="app-view">
+          <div class="filter-bar">
+            <div class="input-with-icon" style="max-width: 420px; width: 100%;">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="customer-search-input" class="form-control" placeholder="Buscar cliente por nome, telefone ou bairro...">
+            </div>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span class="badge badge-concluido" id="customer-count-badge">0 cadastrados</span>
+              <button class="btn btn-primary btn-sm" onclick="window.customersController.openCustomerModal()">
+                <i class="fa-solid fa-user-plus"></i> Novo Cliente
+              </button>
+            </div>
+          </div>
+
+          <div class="grid-3" id="customers-list-container">
+            <!-- Customer Cards rendered via JS -->
+          </div>
+        </section>
+
+        <!-- ===============================================================
+             VIEW 5: ORÇAMENTOS & CALCULADORA
+             =============================================================== -->
+        <section id="view-orcamentos" class="app-view">
+          <div class="grid-2">
+            <!-- Left: Assembly Price Calculator -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-calculator"></i> Calculadora de Montagem</h3>
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Tabela padrão configurável</span>
+              </div>
+
+              <!-- Customer Info for Quote -->
+              <div class="form-row" style="margin-bottom: 16px;">
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">Nome do Cliente</label>
+                  <input type="text" id="calc-client-name" class="form-control" placeholder="Ex: Patrícia Lima">
+                </div>
+                <div class="form-group" style="margin-bottom: 0;">
+                  <label class="form-label">WhatsApp</label>
+                  <input type="text" id="calc-client-phone" class="form-control" placeholder="(11) 99999-9999">
+                </div>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Endereço / Bairro</label>
+                <input type="text" id="calc-client-address" class="form-control" placeholder="Ex: Moema, São Paulo">
+              </div>
+
+              <!-- Items Catalog -->
+              <div style="font-weight: 700; font-size: 0.9rem; margin-bottom: 10px; color: var(--text-main);">
+                Selecione os móveis a serem montados:
+              </div>
+              <div id="calc-catalog-items" style="max-height: 380px; overflow-y: auto; padding-right: 4px;">
+                <!-- Catalog injected via quotes.js -->
+              </div>
+
+              <!-- Extra Fees -->
+              <div class="form-row" style="margin-top: 16px;">
+                <div class="form-group">
+                  <label class="form-label">Gastos com Material (R$)</label>
+                  <input type="number" id="calc-cost" class="form-control" placeholder="0,00" value="0" min="0" step="0.01">
+                  <small class="form-hint">Corrediças, dobradiças, parafusos. Não entra no valor do cliente &mdash; sai do seu lucro.</small>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Desconto (R$)</label>
+                  <input type="number" id="calc-discount" class="form-control" placeholder="0,00" value="0">
+                </div>
+              </div>
+
+              <!-- Subtotal & Total Display -->
+              <div style="background: var(--bg-app); padding: 18px; border-radius: var(--radius-md); border: 1px solid var(--border-color); margin-top: 10px;">
+                <div style="display: flex; justify-content: space-between; margin-bottom: 6px; font-size: 0.9rem;">
+                  <span>Subtotal das Peças:</span>
+                  <strong id="calc-subtotal-val">R$ 0,00</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 1.35rem; font-weight: 800; color: var(--primary); border-top: 1.5px solid var(--border-color); padding-top: 10px; margin-top: 6px;">
+                  <span>Valor Total:</span>
+                  <span id="calc-total-val">R$ 0,00</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; margin-top: 10px; font-size: 0.9rem; color: var(--text-muted);">
+                  <span><i class="fa-solid fa-basket-shopping"></i> Gastos com material:</span>
+                  <strong id="calc-cost-val">R$ 0,00</strong>
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; font-size: 1.05rem; font-weight: 800; color: var(--success-dark);">
+                  <span><i class="fa-solid fa-sack-dollar"></i> Seu lucro líquido:</span>
+                  <span id="calc-profit-val">R$ 0,00</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Right: WhatsApp Preview & Actions -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa-brands fa-whatsapp" style="color: #25D366;"></i> Mensagem Pronta para WhatsApp</h3>
+              </div>
+
+              <div class="form-group">
+                <textarea id="calc-preview-text" class="form-control" rows="14" style="font-family: monospace; font-size: 0.88rem; line-height: 1.6; resize: vertical;"></textarea>
+              </div>
+
+              <div style="display: flex; flex-direction: column; gap: 12px;">
+                <div style="display: flex; gap: 10px;">
+                  <button type="button" class="btn btn-outline" id="calc-copy-whatsapp-btn" style="flex: 1;">
+                    <i class="fa-solid fa-copy"></i> Copiar Mensagem
+                  </button>
+                  <button type="button" class="btn btn-whatsapp" id="calc-send-whatsapp-btn" style="flex: 1;">
+                    <i class="fa-brands fa-whatsapp"></i> Enviar no WhatsApp
+                  </button>
+                </div>
+                <button type="button" class="btn btn-primary" id="calc-schedule-btn">
+                  <i class="fa-solid fa-calendar-check"></i> Orçamento Aprovado? Agendar na Agenda
+                </button>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ===============================================================
+             VIEW 6: AJUSTES & CONFIGURAÇÕES
+             =============================================================== -->
+        <section id="view-ajustes" class="app-view">
+          <div class="grid-2">
+            <!-- Profile and Business Settings -->
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-id-card"></i> Dados do Montador</h3>
+              </div>
+              <form id="settings-form">
+                <div class="form-group">
+                  <label class="form-label">Nome Completo do Montador</label>
+                  <input type="text" id="set-montador-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Nome da Empresa / Nome Comercial</label>
+                  <input type="text" id="set-company-name" class="form-control" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">WhatsApp Profissional</label>
+                  <input type="text" id="set-phone" class="form-control" required>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Chave PIX (para orçamentos e recibos)</label>
+                    <input type="text" id="set-pix-key" class="form-control" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Tipo de Chave PIX</label>
+                    <select id="set-pix-type" class="form-control">
+                      <option value="Telefone">Telefone</option>
+                      <option value="CPF">CPF</option>
+                      <option value="CNPJ">CNPJ</option>
+                      <option value="E-mail">E-mail</option>
+                      <option value="Aleatória">Aleatória</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Meta de Faturamento Mensal (R$)</label>
+                  <input type="number" id="set-monthly-goal" class="form-control" step="100" required>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Link de avaliação no Google (opcional)</label>
+                  <input type="url" id="set-review-link" class="form-control" placeholder="https://g.page/r/.../review">
+                  <small class="form-hint">Cole aqui o link da sua ficha no Google. Ele é usado no botão &ldquo;Pedir avaliação&rdquo;.</small>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                  <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
+                </button>
+              </form>
+            </div>
+
+            <!-- Backup, Segurança e Restauração -->
+            <div>
+              <div class="card" style="margin-bottom: 24px;">
+                <div class="card-header">
+                  <h3 class="card-title"><i class="fa-solid fa-cloud-arrow-up"></i> Backup e Segurança</h3>
+                </div>
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+                  Seus dados ficam armazenados com segurança neste dispositivo. Recomendamos fazer o download do backup regularmente para não perder seus agendamentos e histórico financeiro caso troque de aparelho.
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                  <button class="btn btn-primary" id="btn-export-backup">
+                    <i class="fa-solid fa-download"></i> Baixar Backup Completo (JSON)
+                  </button>
+                  <label class="btn btn-outline" style="cursor: pointer;">
+                    <i class="fa-solid fa-upload"></i> Restaurar Arquivo de Backup
+                    <input type="file" id="input-import-backup" accept=".json" style="display: none;">
+                  </label>
+                </div>
+              </div>
+
+              <div class="card">
+                <div class="card-header">
+                  <h3 class="card-title"><i class="fa-solid fa-rotate-left" style="color: var(--danger);"></i> Dados de Demonstração</h3>
+                </div>
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+                  Deseja recarregar os dados de exemplo originais (serviços de Setembro 2026, clientes e histórico)?
+                </p>
+                <button class="btn btn-danger btn-sm" id="btn-reset-data">
+                  <i class="fa-solid fa-trash-can-arrow-up"></i> Restaurar Dados Padrão de Demonstração
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Admin-only: Gestão de Equipe (Funcionários) -->
+          <div class="card" data-admin-only="true" style="margin-top: 24px; border: 1.5px solid rgba(59, 130, 246, 0.35);">
+            <div class="card-header">
+              <h3 class="card-title">
+                <i class="fa-solid fa-users-gear" style="color: #3B82F6;"></i> Gestão da Equipe (Funcionários)
+              </h3>
+              <span class="badge badge-admin"><i class="fa-solid fa-shield-halved"></i> Exclusivo ADM</span>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 20px;">
+              Como administrador, você pode cadastrar contas de acesso para seus funcionários. Eles receberão este login e senha para acessar o sistema no celular ou computador.
+            </p>
+
+            <div class="grid-2">
+              <!-- Formulário de cadastro de funcionário -->
+              <div style="background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 20px;">
+                <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 14px; color: var(--text-main);">
+                  <i class="fa-solid fa-user-plus" style="color: var(--primary);"></i> Cadastrar Novo Funcionário
+                </h4>
+                <form id="employee-form">
+                  <div class="form-group">
+                    <label class="form-label">Nome Completo do Funcionário *</label>
+                    <input type="text" id="emp-name" class="form-control" placeholder="Ex: Lucas Gabriel" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">E-mail de Acesso (Login) *</label>
+                    <input type="email" id="emp-email" class="form-control" placeholder="lucas@exemplo.com" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Senha Inicial (Mínimo 6 caracteres) *</label>
+                    <input type="password" id="emp-password" class="form-control" placeholder="••••••••" minlength="6" required>
+                  </div>
+                  <button type="submit" class="btn btn-primary" id="btn-create-emp" style="width: 100%;">
+                    <i class="fa-solid fa-user-plus"></i> Cadastrar Funcionário
+                  </button>
+                </form>
+              </div>
+
+              <!-- Lista de funcionários da equipe -->
+              <div>
+                <h4 style="font-size: 1rem; font-weight: 800; margin-bottom: 14px; color: var(--text-main);">
+                  <i class="fa-solid fa-id-badge" style="color: #3B82F6;"></i> Equipe Cadastrada
+                </h4>
+                <div id="team-members-list" style="max-height: 320px; overflow-y: auto;">
+                  <!-- Rendered dynamically in auth.js -->
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Sessão da Conta e Logout para Mobile -->
+          <div class="card" style="margin-top: 24px;">
+            <div class="card-header">
+              <h3 class="card-title"><i class="fa-solid fa-arrow-right-from-bracket"></i> Sessão Atual</h3>
+            </div>
+            <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+              Deseja encerrar sua sessão neste dispositivo?
+            </p>
+            <button class="btn btn-danger btn-logout-trigger">
+              <i class="fa-solid fa-right-from-bracket"></i> Sair da Conta (Logout)
+            </button>
+          </div>
+        </section>
+
+      </div>
+    </main>
+
+    <!-- Floating Action Button (FAB) -->
+    <button class="fab-btn" id="global-fab-btn" title="Nova Montagem / Lançamento">
+      <i class="fa-solid fa-plus"></i>
+    </button>
+
+    <!-- Mobile Bottom Navigation (Screenshot Match) -->
+    <nav class="mobile-bottom-nav">
+      <ul class="bottom-nav-list">
+        <li>
+          <button class="bottom-nav-item" data-view-target="view-inicio">
+            <i class="fa-solid fa-house"></i>
+            <span>Início</span>
+          </button>
+        </li>
+        <li>
+          <button class="bottom-nav-item active" data-view-target="view-agenda">
+            <i class="fa-regular fa-calendar-days"></i>
+            <span>Agenda</span>
+          </button>
+        </li>
+        <li>
+          <button class="bottom-nav-item" data-view-target="view-clientes">
+            <i class="fa-solid fa-users"></i>
+            <span>Clientes</span>
+          </button>
+        </li>
+        <li>
+          <button class="bottom-nav-item" data-view-target="view-financeiro">
+            <i class="fa-solid fa-wallet"></i>
+            <span>Financeiro</span>
+          </button>
+        </li>
+        <li>
+          <button class="bottom-nav-item" data-view-target="view-orcamentos">
+            <i class="fa-solid fa-calculator"></i>
+            <span>Orçar</span>
+          </button>
+        </li>
+        <li>
+          <button class="bottom-nav-item" data-view-target="view-ajustes">
+            <i class="fa-solid fa-gear"></i>
+            <span>Ajustes</span>
+          </button>
+        </li>
+      </ul>
+    </nav>
+  </div>
+
+  <!-- ===============================================================
+       MODAL 1: NOVO / EDITAR SERVIÇO
+       =============================================================== -->
+  <div class="modal-overlay" id="service-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="service-modal-title"><i class="fa-solid fa-calendar-plus"></i> Nova Montagem</h3>
+        <button class="modal-close-btn" data-modal-close><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="service-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Cliente Cadastrado (Opcional)</label>
+            <select id="service-client-select" class="form-control">
+              <!-- Populated via JS -->
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Nome do Cliente *</label>
+            <input type="text" id="service-client-name" class="form-control" placeholder="Ex: Eder Oliveira" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Telefone / WhatsApp</label>
+              <input type="text" id="service-phone" class="form-control" placeholder="(11) 99999-9999">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Endereço Completo</label>
+              <input type="text" id="service-address" class="form-control" placeholder="Rua, número, apto, bairro">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Data da Montagem *</label>
+              <input type="date" id="service-date" class="form-control" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Horário Previsto *</label>
+              <input type="time" id="service-time" class="form-control" value="09:00" required>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Descrição dos Móveis / Serviço *</label>
+            <textarea id="service-description" class="form-control" rows="2" placeholder="Ex: Guarda-Roupa Casal 6 portas + Painel TV sala" required></textarea>
+          </div>
+
+          <div class="form-row-3">
+            <div class="form-group">
+              <label class="form-label">Valor cobrado do cliente (R$) *</label>
+              <input type="number" id="service-value" class="form-control" step="0.01" min="0" placeholder="0,00" inputmode="decimal" required>
+              <small class="form-hint">Total que o cliente paga.</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Gastos com material (R$)</label>
+              <input type="number" id="service-cost" class="form-control" step="0.01" min="0" placeholder="0,00" inputmode="decimal" value="0">
+              <small class="form-hint">Corrediça, dobradiça, parafuso&hellip;</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Lucro líquido</label>
+              <div class="profit-preview" id="service-profit-preview">R$ 0,00</div>
+              <small class="form-hint">Valor &minus; gastos. Calculado automaticamente.</small>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Forma de Pagamento</label>
+              <select id="service-payment-method" class="form-control">
+                <option value="PIX">PIX</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Cartão de Crédito">Cartão de Crédito</option>
+                <option value="Cartão de Débito">Cartão de Débito</option>
+                <option value="A Prazo / Boleto">A Prazo / Boleto</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Pagamento</label>
+              <select id="service-payment-status" class="form-control">
+                <option value="pendente">Pendente</option>
+                <option value="pago">Já Pago</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Status da Montagem</label>
+            <select id="service-status" class="form-control">
+              <option value="agendado">Agendado (Vermelho na Agenda)</option>
+              <option value="concluido">Concluído (Verde na Agenda)</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Observações adicionais (ferramentas necessárias, detalhes)</label>
+            <input type="text" id="service-notes" class="form-control" placeholder="Ex: Levar broca 8mm e parafusos extras">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Salvar Agendamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===============================================================
+       MODAL 2: DETALHES DO SERVIÇO
+       =============================================================== -->
+  <div class="modal-overlay" id="service-detail-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-circle-info"></i> Detalhes da Montagem</h3>
+        <button class="modal-close-btn" data-modal-close><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" id="service-detail-body">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================================================
+       MODAL 3: LANÇAMENTO FINANCEIRO (RECEITA OU DESPESA)
+       =============================================================== -->
+  <!-- Ficha do Cliente: dados + histórico completo de serviços -->
+  <div class="modal-overlay" id="customer-detail-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-address-card"></i> Ficha do Cliente</h3>
+        <button class="modal-close-btn" data-modal-close><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" id="customer-detail-body">
+        <!-- Rendered via JS -->
+      </div>
+    </div>
+  </div>
+
+  <div class="modal-overlay" id="transaction-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="tx-modal-title"><i class="fa-solid fa-circle-plus"></i> Novo Lançamento</h3>
+        <button class="modal-close-btn" data-modal-close><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="transaction-form">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Tipo de Lançamento</label>
+              <select id="tx-type" class="form-control">
+                <option value="receita">Receita (Entrada de Dinheiro)</option>
+                <option value="despesa">Despesa (Saída de Dinheiro)</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Categoria</label>
+              <select id="tx-category" class="form-control">
+                <!-- Dynamically filled in finance.js -->
+              </select>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Descrição *</label>
+            <input type="text" id="tx-description" class="form-control" placeholder="Ex: Abastecimento de Gasolina" required>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Valor (R$) *</label>
+              <input type="number" id="tx-value" class="form-control" step="0.01" placeholder="0,00" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Data *</label>
+              <input type="date" id="tx-date" class="form-control" required>
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Forma de Pagamento</label>
+              <select id="tx-payment-method" class="form-control">
+                <option value="PIX">PIX</option>
+                <option value="Dinheiro">Dinheiro</option>
+                <option value="Cartão Débito">Cartão Débito</option>
+                <option value="Cartão Crédito">Cartão Crédito</option>
+                <option value="Outro">Outro</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Status</label>
+              <select id="tx-status" class="form-control">
+                <option value="pago">Efetivado / Pago</option>
+                <option value="pendente">Pendente / A Pagar</option>
+              </select>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Salvar Lançamento</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===============================================================
+       MODAL 4: NOVO / EDITAR CLIENTE
+       =============================================================== -->
+  <div class="modal-overlay" id="customer-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="cust-modal-title"><i class="fa-solid fa-user-plus"></i> Novo Cliente</h3>
+        <button class="modal-close-btn" data-modal-close><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="customer-form">
+        <div class="modal-body">
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Nome Completo *</label>
+              <input type="text" id="cust-name" class="form-control" placeholder="Ex: Patrícia Souza" required>
+            </div>
+            <div class="form-group">
+              <label class="form-label">WhatsApp / Telefone</label>
+              <input type="text" id="cust-phone" class="form-control" placeholder="(11) 98888-7777">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">CEP (Auto-busca ViaCEP)</label>
+              <input type="text" id="cust-cep" class="form-control" placeholder="00000-000">
+              <span id="cep-status" style="font-size: 0.75rem; color: var(--primary); font-weight: 600;"></span>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Bairro</label>
+              <input type="text" id="cust-neighborhood" class="form-control" placeholder="Bairro">
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Endereço (Rua / Av)</label>
+              <input type="text" id="cust-address" class="form-control" placeholder="Rua das Flores, 123">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Complemento</label>
+              <input type="text" id="cust-complement" class="form-control" placeholder="Apto 54, Bloco 2">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Cidade / Estado</label>
+            <input type="text" id="cust-city" class="form-control" placeholder="São Paulo - SP">
+          </div>
+
+          <div class="form-group">
+            <label class="form-label">Observações do Cliente</label>
+            <input type="text" id="cust-notes" class="form-control" placeholder="Ex: Tem cachorro dócil, vaga de visitante disponível">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Salvar Cliente</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===============================================================
+       MODAL 5: RECIBO PROFISSIONAL (IMPRIMÍVEL / PDF)
+       =============================================================== -->
+  <div class="modal-overlay" id="receipt-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title"><i class="fa-solid fa-receipt"></i> Recibo de Pagamento</h3>
+        <button class="modal-close-btn" data-modal-close><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <div class="modal-body" id="receipt-modal-body">
+        <!-- Rendered via quotes.js -->
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-outline" data-modal-close>Fechar</button>
+        <button type="button" class="btn btn-primary" onclick="window.print()">
+          <i class="fa-solid fa-print"></i> Imprimir / Salvar PDF
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===============================================================
+       TELA DE LOGIN FIREBASE (MODERNA E RESPONSIVA)
+       =============================================================== -->
+  <div class="login-overlay" id="login-overlay" style="display: none;">
+    <div class="login-card">
+      <div class="login-brand-header">
+        <div class="login-logo">
+          <i class="fa-solid fa-screwdriver-wrench"></i>
+        </div>
+        <h2>RS Montagens</h2>
+        <p>Sistema Profissional do Montador</p>
+      </div>
+
+      <div class="login-alert" id="login-error-alert"></div>
+
+      <form id="login-form">
+        <div class="form-group">
+          <label class="form-label">E-mail de Acesso</label>
+          <div class="input-with-icon">
+            <i class="fa-regular fa-envelope"></i>
+            <input type="email" id="login-email" class="form-control" placeholder="seuemail@exemplo.com" required autocomplete="username">
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Senha</label>
+          <div class="input-with-icon">
+            <i class="fa-solid fa-lock"></i>
+            <input type="password" id="login-password" class="form-control" placeholder="••••••••" required autocomplete="current-password">
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; margin-bottom: 20px;">
+          <button type="button" id="btn-forgot-password" style="background: none; border: none; font-size: 0.82rem; color: var(--primary); font-weight: 700; cursor: pointer;">
+            Esqueceu sua senha?
+          </button>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" id="btn-login-submit" style="width: 100%;">
+          <i class="fa-solid fa-right-to-bracket"></i> Entrar no Sistema
+        </button>
+      </form>
+
+      <div class="login-footer-info">
+        <strong>Perfis de Acesso:</strong><br>
+        👑 Administradores: <code>brisasofc@gmail.com</code> e <code>rsmoveismontador@gmail.com</code><br>
+        👷 Funcionários: Entram com login e senha criados pelo administrador.
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notifications Container -->
+  <div class="toast-container" id="toast-container"></div>
+
+  <!-- Scripts -->
+  <script src="js/firebase-config.js"></script>
+  <script src="js/auth.js"></script>
+  <script src="js/utils.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/calendar.js"></script>
+  <script src="js/services.js"></script>
+  <script src="js/finance.js"></script>
+  <script src="js/customers.js"></script>
+  <script src="js/quotes.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

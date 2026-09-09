@@ -1,0 +1,219 @@
+/* ==========================================================================
+   MOVELPRO - CALENDAR STYLESHEET
+   Accurate to user screenshot, modern, responsive & animated
+   ========================================================================== */
+
+.calendar-card {
+  background: var(--bg-card);
+  border-radius: var(--radius-xl);
+  padding: 24px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid var(--border-color);
+  max-width: 540px;
+  margin: 0 auto 28px;
+}
+
+/* Header Month Navigator */
+.calendar-month-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 22px;
+}
+
+.month-nav-btn {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  color: var(--text-main);
+  cursor: pointer;
+  padding: 8px 14px;
+  border-radius: var(--radius-md);
+  transition: var(--transition);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.month-nav-btn:hover {
+  background: var(--bg-card-hover);
+  color: var(--primary);
+}
+
+.calendar-current-month {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+/* Calendar Weekdays */
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  margin-bottom: 14px;
+}
+
+.calendar-weekdays span {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+/* Calendar Days Grid */
+.calendar-days-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  row-gap: 12px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-main);
+  border-radius: var(--radius-md);
+  cursor: pointer;
+  position: relative;
+  transition: var(--transition-bounce);
+  user-select: none;
+}
+
+.calendar-day:hover:not(.empty) {
+  background: var(--bg-card-hover);
+}
+
+.calendar-day.empty {
+  cursor: default;
+}
+
+/* Status States based directly on screenshot */
+.calendar-day.has-concluido {
+  background-color: var(--success);
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.35);
+}
+
+.calendar-day.has-agendado {
+  background-color: var(--danger);
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.35);
+}
+
+.calendar-day.has-ambos {
+  background: linear-gradient(135deg, var(--danger) 50%, var(--success) 50%);
+  color: #ffffff;
+  font-weight: 800;
+  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.25);
+}
+
+/* Selected Day (Day with active focus ring, like Day 9 in user screenshot) */
+.calendar-day.is-selected {
+  outline: 3px solid #3B82F6;
+  outline-offset: 2px;
+  z-index: 2;
+}
+
+/* Today indicator */
+.calendar-day.is-today::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background-color: currentColor;
+}
+
+/* Legend */
+.calendar-legend-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 24px 0 18px;
+}
+
+.calendar-legend {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.legend-box {
+  width: 16px;
+  height: 16px;
+  border-radius: 4px;
+}
+
+.legend-box.concluido { background-color: var(--success); }
+.legend-box.agendado { background-color: var(--danger); }
+.legend-box.ambos { background: linear-gradient(135deg, var(--danger) 50%, var(--success) 50%); }
+
+/* Selected Date Section Title */
+.selected-date-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 28px 0 16px;
+  max-width: 540px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.selected-date-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.02em;
+}
+
+.selected-date-badge {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+
+.day-services-list {
+  max-width: 540px;
+  margin: 0 auto;
+}
+
+/* Empty State */
+.empty-day-state {
+  text-align: center;
+  padding: 36px 20px;
+  background: var(--bg-card);
+  border: 1.5px dashed var(--border-color);
+  border-radius: var(--radius-lg);
+  color: var(--text-muted);
+}
+
+.empty-day-state i {
+  font-size: 2.4rem;
+  color: var(--text-light);
+  margin-bottom: 10px;
+  display: block;
+}
+
+.empty-day-state p {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin-bottom: 14px;
+}

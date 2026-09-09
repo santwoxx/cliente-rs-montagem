@@ -1,0 +1,28 @@
+# Dependency directories
+node_modules/
+jspm_packages/
+
+# Production build
+dist/
+build/
+
+# Operating System Files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# IDE & Editor Files
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Logs
+*.log
+npm-debug.log*
+
+# Optional large media
+# WhatsApp Video 2026-09-09 at 12.58.36.mp4

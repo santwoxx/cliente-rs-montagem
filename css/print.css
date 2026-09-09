@@ -1,0 +1,90 @@
+/* ==========================================================================
+   MOVELPRO - PRINT STYLESHEET
+   Clean, Professional Receipt & Report Printing
+   ========================================================================== */
+
+@media print {
+  /* Hide interface chrome */
+  .app-sidebar,
+  .app-header,
+  .mobile-bottom-nav,
+  .fab-btn,
+  .toast-container,
+  .btn,
+  .filter-bar,
+  .modal-close-btn,
+  .modal-footer {
+    display: none !important;
+  }
+
+  body, html, .app-layout, .app-main, .content-body {
+    background: #fff !important;
+    color: #000 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    font-size: 12pt !important;
+  }
+
+  /* Printable Document Container */
+  .printable-receipt {
+    display: block !important;
+    padding: 20px;
+    max-width: 700px;
+    margin: 0 auto;
+    border: 2px solid #333;
+    border-radius: 8px;
+  }
+
+  .receipt-header {
+    text-align: center;
+    border-bottom: 2px dashed #666;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+  }
+
+  .receipt-header h2 {
+    font-size: 18pt;
+    margin-bottom: 4px;
+  }
+
+  .receipt-section {
+    margin-bottom: 16px;
+  }
+
+  .receipt-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 14px 0;
+  }
+
+  .receipt-table th, 
+  .receipt-table td {
+    border-bottom: 1px solid #ddd;
+    padding: 8px;
+    text-align: left;
+  }
+
+  .receipt-total {
+    font-size: 16pt;
+    font-weight: bold;
+    text-align: right;
+    margin-top: 14px;
+    border-top: 2px solid #000;
+    padding-top: 8px;
+  }
+
+  .receipt-signatures {
+    margin-top: 50px;
+    display: flex;
+    justify-content: space-between;
+  }
+
+  .signature-line {
+    width: 45%;
+    border-top: 1px solid #000;
+    text-align: center;
+    padding-top: 6px;
+    font-size: 10pt;
+  }
+}
