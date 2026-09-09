@@ -1,0 +1,55 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // =========================================================================
+    // REGRAS DE ACESSO DO SISTEMA RS MONTAGENS
+    // Administradores: brisasofc@gmail.com e rsmoveismontador@gmail.com
+    // Funcionários: Usuários cadastrados pelo administrador que acessam com login e senha
+    // =========================================================================
+
+    // Função: Verifica se o usuário autenticado é um Administrador oficial
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email.lower() == 'brisasofc@gmail.com' ||
+        request.auth.token.email.lower() == 'rsmoveismontador@gmail.com'
+      );
+    }
+
+    // Função: Verifica se é um usuário autenticado (Funcionário ou Admin)
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // 1. Coleção de Usuários e Equipe:
+    // Apenas Administradores podem criar, editar ou excluir contas de funcionários.
+    // Funcionários podem ler os dados da equipe para identificação no sistema.
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create, update, delete: if isAdmin();
+    }
+
+    // 2. Dados do Aplicativo (Serviços, Clientes, Financeiro, Configurações):
+    match /app_data/{docId} {
+      // Leitura permitida para qualquer usuário autenticado (Admins e Funcionários)
+      allow read: if isAuthenticated();
+
+      // Configurações gerais da empresa e transações financeiras:
+      // Exclusivo para Administradores
+      allow write: if (docId == 'settings' || docId == 'transactions')
+        ? isAdmin()
+        : isAuthenticated();
+
+      // Serviços/Montagens e Clientes:
+      // Permitido para Admins e Funcionários operacionais
+      allow write: if (docId == 'services' || docId == 'customers')
+        && isAuthenticated();
+    }
+
+    // 3. Regra de Segurança Geral:
+    // Administradores têm permissão total de segurança sobre qualquer documento
+    match /{document=**} {
+      allow read, write: if isAdmin();
+    }
+  }
+}
