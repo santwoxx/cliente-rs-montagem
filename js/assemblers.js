@@ -69,6 +69,8 @@ class AssemblersController {
 
   summarize(services) {
     let total = 0;
+    let repasse = 0;
+    let sobra = 0;
     let profit = 0;
     let concluidos = 0;
     let agendados = 0;
@@ -76,12 +78,15 @@ class AssemblersController {
     services.forEach(s => {
       if (s.status === 'cancelado') return;
       total += Utils.serviceTotal(s);
-      profit += Utils.serviceProfit(s);
+      repasse += Utils.assemblerPay(s);
+      const sSobra = Utils.ownerNet(s);
+      sobra += sSobra;
+      profit += sSobra;
       if (s.status === 'concluido') concluidos++;
       if (s.status === 'agendado') agendados++;
     });
 
-    return { total, profit, concluidos, agendados, count: services.length };
+    return { total, repasse, sobra, profit, concluidos, agendados, count: services.length };
   }
 
   openAssemblerModal(assemblerId = null) {
@@ -295,6 +300,9 @@ class AssemblersController {
       const idArg = Utils.escapeJsString(a.id);
       const stats = this.summarize(this.getAssemblerServices(a.id));
       const isSelected = this.selectedAssemblerId === a.id;
+      const valorChip = a.isOwner
+        ? Utils.formatBRL(stats.total)
+        : `Repasse: ${Utils.formatBRL(stats.repasse)}`;
 
       return `
         <button class="assembler-chip ${isSelected ? 'is-selected' : ''}"
@@ -302,7 +310,7 @@ class AssemblersController {
           <div class="client-avatar ${colors[i % colors.length]}">${esc(Utils.initialOf(a.name, 'M'))}</div>
           <div class="assembler-chip-info">
             <strong>${esc(a.name)}${a.isOwner ? ' <span class="owner-tag">eu</span>' : ''}</strong>
-            <span>${stats.count} montagem${stats.count === 1 ? '' : 's'} &bull; ${Utils.formatBRL(stats.total)}</span>
+            <span>${stats.count} montagem${stats.count === 1 ? '' : 's'} &bull; ${valorChip}</span>
           </div>
         </button>
       `;
@@ -321,14 +329,18 @@ class AssemblersController {
       return;
     }
 
+    const auth = window.authController;
+    const ehAdmin = !auth || auth.podeVerValoresCheios();
     const esc = (v) => Utils.escapeHtml(v);
     const idArg = Utils.escapeJsString(assembler.id);
     const services = this.getAssemblerServices(assembler.id);
     const stats = this.summarize(services);
     const stores = window.storageManager.getStores();
 
-    panel.innerHTML = `
-      <div class="grid-4" style="margin-bottom: 24px;">
+    // Cards de indicadores no topo do painel
+    let statCardsHtml = '';
+    if (assembler.isOwner) {
+      statCardsHtml = `
         <div class="stat-card">
           <div class="stat-header">
             <span class="stat-title">Total produzido</span>
@@ -361,6 +373,88 @@ class AssemblersController {
           <div class="stat-value">${stats.agendados}</div>
           <div class="stat-subtitle">Ainda por fazer</div>
         </div>
+      `;
+    } else if (!ehAdmin) {
+      // Montador / Funcionário logado: vê apenas os seus próprios repasses!
+      statCardsHtml = `
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Você recebe</span>
+            <div class="stat-icon icon-green"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+          </div>
+          <div class="stat-value">${Utils.formatBRL(stats.repasse)}</div>
+          <div class="stat-subtitle">Total a receber no período</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Concluídas</span>
+            <div class="stat-icon icon-green"><i class="fa-solid fa-circle-check"></i></div>
+          </div>
+          <div class="stat-value">${stats.concluidos}</div>
+          <div class="stat-subtitle">Montagens finalizadas</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Agendadas</span>
+            <div class="stat-icon icon-red"><i class="fa-solid fa-calendar-check"></i></div>
+          </div>
+          <div class="stat-value">${stats.agendados}</div>
+          <div class="stat-subtitle">Ainda por fazer</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Total de Montagens</span>
+            <div class="stat-icon icon-blue"><i class="fa-solid fa-clipboard-list"></i></div>
+          </div>
+          <div class="stat-value">${stats.count}</div>
+          <div class="stat-subtitle">No período selecionado</div>
+        </div>
+      `;
+    } else {
+      // Administrador visualizando o montador parceiro / funcionário
+      statCardsHtml = `
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">A pagar ao montador</span>
+            <div class="stat-icon icon-orange"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+          </div>
+          <div class="stat-value" style="color: var(--primary);">${Utils.formatBRL(stats.repasse)}</div>
+          <div class="stat-subtitle">Repasse combinado ao montador</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Sobra para você</span>
+            <div class="stat-icon icon-blue"><i class="fa-solid fa-wallet"></i></div>
+          </div>
+          <div class="stat-value" style="color: var(--success);">${Utils.formatBRL(stats.sobra)}</div>
+          <div class="stat-subtitle">Lucro líquido após repasse e material</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Total cobrado</span>
+            <div class="stat-icon icon-green"><i class="fa-solid fa-sack-dollar"></i></div>
+          </div>
+          <div class="stat-value">${Utils.formatBRL(stats.total)}</div>
+          <div class="stat-subtitle">Cobrado do cliente (serviço + desloc.)</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-header">
+            <span class="stat-title">Montagens</span>
+            <div class="stat-icon icon-red"><i class="fa-solid fa-calendar-check"></i></div>
+          </div>
+          <div class="stat-value">${stats.concluidos} conc. / ${stats.agendados} agend.</div>
+          <div class="stat-subtitle">${stats.count} serviço(s) no período</div>
+        </div>
+      `;
+    }
+
+    const tableValorHeader = assembler.isOwner
+      ? 'Valor'
+      : (ehAdmin ? 'Repasse Montador' : 'Você Recebe');
+
+    panel.innerHTML = `
+      <div class="grid-4" style="margin-bottom: 24px;">
+        ${statCardsHtml}
       </div>
 
       <div class="card">
@@ -393,7 +487,7 @@ class AssemblersController {
                   <th>Serviço</th>
                   <th>Origem</th>
                   <th>Status</th>
-                  <th style="text-align: right;">Valor</th>
+                  <th style="text-align: right;">${tableValorHeader}</th>
                 </tr>
               </thead>
               <tbody>
@@ -403,6 +497,28 @@ class AssemblersController {
                     : (s.status === 'cancelado' ? 'Cancelado' : 'Agendado');
                   const statusClass = s.status === 'concluido' ? 'badge-concluido'
                     : (s.status === 'cancelado' ? 'badge-cancelado' : 'badge-agendado');
+
+                  const total = Utils.serviceTotal(s);
+                  const pay = Utils.assemblerPay(s);
+                  const sobra = Utils.ownerNet(s);
+
+                  let valorTd = '';
+                  if (assembler.isOwner) {
+                    valorTd = `<div style="text-align: right; font-weight: 800;">${Utils.formatBRL(total)}</div>`;
+                  } else if (!ehAdmin) {
+                    // O funcionário só vê o que ele vai receber!
+                    valorTd = `<div style="text-align: right; font-weight: 800; color: var(--primary);">${Utils.formatBRL(pay)}</div>`;
+                  } else {
+                    // Administrador vê o repasse como destaque e os totais da empresa abaixo
+                    valorTd = `
+                      <div style="text-align: right;">
+                        <div style="font-weight: 800; color: var(--primary); font-size: 0.96rem;">${Utils.formatBRL(pay)}</div>
+                        <div class="table-subtext" style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">
+                          Cobrado: ${Utils.formatBRL(total)} &bull; Sobra: <strong style="color: var(--success);">${Utils.formatBRL(sobra)}</strong>
+                        </div>
+                      </div>
+                    `;
+                  }
 
                   return `
                     <tr class="clickable-row" onclick="window.servicesController.openServiceDetailModal('${Utils.escapeJsString(s.id)}')">
@@ -414,7 +530,7 @@ class AssemblersController {
                       </td>
                       <td>${store ? esc(store.name) : 'Particular'}</td>
                       <td><span class="badge ${statusClass}">${statusLabel}</span></td>
-                      <td style="text-align: right; font-weight: 800;">${Utils.formatBRL(Utils.serviceTotal(s))}</td>
+                      <td>${valorTd}</td>
                     </tr>
                   `;
                 }).join('')}

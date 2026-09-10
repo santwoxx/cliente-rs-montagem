@@ -94,36 +94,19 @@ const Utils = {
   },
 
   /* ---------- Financeiro do serviço ---------- */
-  // Regra do vídeo: o cliente paga o VALOR + o DESLOCAMENTO;
-  // o material sai do bolso do montador.
+  // Regra: o cliente paga o VALOR + o DESLOCAMENTO.
   // Total (cliente paga) = valor do serviço + deslocamento.
   serviceTotal(service) {
     return this.toNumber(service && service.value) + this.toNumber(service && service.travelFee);
   },
 
-  // Lucro líquido = total cobrado - gastos com material.
-  serviceProfit(service) {
-    return this.serviceTotal(service) - this.toNumber(service && service.cost);
-  },
-
   /* ---------- Pagamento do montador ---------- */
   // O cliente paga o total; desse total sai a parte do montador que executou.
   // Guardamos sempre o VALOR em reais (assemblerPay). A porcentagem é só um
-  // atalho de digitação: ao escolher 30% o campo já vira número redondo,
-  // porque o montador arredonda tudo na hora de pagar.
+  // atalho de digitação no formulário.
   assemblerPay(service) {
     if (!service) return 0;
     return this.toNumber(service.assemblerPay);
-  },
-
-  // Quanto sobra para o dono: total - material - pagamento do montador.
-  ownerNet(service) {
-    return this.serviceProfit(service) - this.assemblerPay(service);
-  },
-
-  // 30% de 574 = 172,20 -> vira 172. Número redondo, do jeito que ele pediu.
-  roundPay(value) {
-    return Math.round(this.toNumber(value));
   },
 
   // O montador que executou é o próprio dono? Então não há repasse a pagar.
@@ -132,6 +115,25 @@ const Utils = {
     const assembler = (window.storageManager.getAssemblers() || [])
       .find(a => a.id === service.assemblerId);
     return !!(assembler && assembler.isOwner);
+  },
+
+  // Quanto sobra para o dono: total cobrado - gastos com material - repasse do montador.
+  // Se quem executou foi o próprio dono, o repasse a terceiros é zero.
+  ownerNet(service) {
+    const total = this.serviceTotal(service);
+    const cost = this.toNumber(service && service.cost);
+    const pay = this.isOwnerAssembler(service) ? 0 : this.assemblerPay(service);
+    return total - cost - pay;
+  },
+
+  // Lucro líquido do dono/empresa neste serviço
+  serviceProfit(service) {
+    return this.ownerNet(service);
+  },
+
+  // 30% de 574 = 172,20 -> vira 172. Número redondo, do jeito que ele pediu.
+  roundPay(value) {
+    return Math.round(this.toNumber(value));
   },
 
   /* ---------- Texto ---------- */

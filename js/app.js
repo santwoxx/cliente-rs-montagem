@@ -237,32 +237,8 @@ class App {
     const monthPrefix = Utils.currentMonthPrefix();
     const todayStr = Utils.todayISO();
 
-    let faturamento = 0;
-    let pendente = 0;
-    let concluidos = 0;
-    let agendados = 0;
-    let gastosMaterial = 0;
-
-    services.forEach(s => {
-      if ((s.date || '').startsWith(monthPrefix)) {
-        if (s.status === 'concluido') {
-          concluidos++;
-          gastosMaterial += Utils.toNumber(s.cost);
-        } else if (s.status === 'agendado') {
-          agendados++;
-          pendente += Utils.serviceTotal(s);
-        }
-      }
-    });
-
-    transactions.forEach(t => {
-      if ((t.date || '').startsWith(monthPrefix) && t.type === 'receita' && t.status === 'pago') {
-        faturamento += Utils.toNumber(t.value);
-      }
-    });
-
-    // Lucro líquido = o que entrou menos o material que saiu do bolso
-    const lucroLiquido = faturamento - gastosMaterial;
+    const auth = window.authController;
+    const ehAdmin = !auth || auth.podeVerValoresCheios();
 
     // Render Today list on Dashboard
     const todayServices = services.filter(s => s.date === todayStr && s.status !== 'cancelado');
@@ -291,19 +267,117 @@ class App {
     const kpiPendente = document.getElementById('dash-kpi-pendente');
     const kpiConcluidos = document.getElementById('dash-kpi-concluidos');
     const kpiAgendados = document.getElementById('dash-kpi-agendados');
-
     const kpiLucro = document.getElementById('dash-kpi-lucro');
     const kpiGastos = document.getElementById('dash-kpi-gastos');
+    const headerPill = document.getElementById('header-quick-stat');
 
-    if (kpiFaturamento) kpiFaturamento.textContent = Utils.formatBRL(faturamento);
-    if (kpiPendente) kpiPendente.textContent = Utils.formatBRL(pendente);
+    if (!ehAdmin) {
+      // Montador / Funcionário logado: vê apenas os números pessoais dele
+      const meuId = auth.getCurrentAssemblerId();
+      let meusGanhosRecebidos = 0;
+      let meusGanhosPendentes = 0;
+      let meusConcluidos = 0;
+      let meusAgendados = 0;
+
+      services.forEach(s => {
+        if (s.assemblerId === meuId && (s.date || '').startsWith(monthPrefix)) {
+          const pay = Utils.assemblerPay(s);
+          if (s.status === 'concluido') {
+            meusConcluidos++;
+            meusGanhosRecebidos += pay;
+          } else if (s.status === 'agendado') {
+            meusAgendados++;
+            meusGanhosPendentes += pay;
+          }
+        }
+      });
+
+      if (kpiFaturamento) {
+        kpiFaturamento.textContent = Utils.formatBRL(meusGanhosRecebidos);
+        const cardTitle = kpiFaturamento.closest('.stat-card')?.querySelector('.stat-title');
+        if (cardTitle) cardTitle.textContent = 'Você Recebeu';
+      }
+      if (kpiLucro) {
+        kpiLucro.textContent = Utils.formatBRL(meusGanhosPendentes);
+        const cardTitle = kpiLucro.closest('.stat-card')?.querySelector('.stat-title');
+        if (cardTitle) cardTitle.textContent = 'A Receber';
+        const cardSub = kpiLucro.closest('.stat-card')?.querySelector('.stat-subtitle');
+        if (cardSub) cardSub.textContent = 'Montagens agendadas para você';
+      }
+      if (kpiPendente) {
+        kpiPendente.textContent = Utils.formatBRL(meusGanhosRecebidos + meusGanhosPendentes);
+        const cardTitle = kpiPendente.closest('.stat-card')?.querySelector('.stat-title');
+        if (cardTitle) cardTitle.textContent = 'Total no Mês';
+      }
+      if (kpiConcluidos) kpiConcluidos.textContent = meusConcluidos;
+      if (kpiAgendados) kpiAgendados.textContent = meusAgendados;
+      if (kpiGastos) kpiGastos.textContent = 'R$ 0,00';
+
+      if (headerPill) {
+        headerPill.innerHTML = `<span class="dot"></span> ${todayServices.length} hoje &bull; ${Utils.formatBRL(meusGanhosRecebidos)} recebido no mês`;
+      }
+      return;
+    }
+
+    // Administrador: cálculo correto e transparente da empresa
+    let faturamento = 0;
+    let pendente = 0;
+    let concluidos = 0;
+    let agendados = 0;
+    let gastosMaterial = 0;
+    let repassesMontadores = 0;
+    let totalDespesasPagas = 0;
+
+    services.forEach(s => {
+      if ((s.date || '').startsWith(monthPrefix)) {
+        if (s.status === 'concluido') {
+          concluidos++;
+          gastosMaterial += Utils.toNumber(s.cost);
+          if (!Utils.isOwnerAssembler(s)) {
+            repassesMontadores += Utils.assemblerPay(s);
+          }
+        } else if (s.status === 'agendado') {
+          agendados++;
+          pendente += Utils.serviceTotal(s);
+        }
+      }
+    });
+
+    transactions.forEach(t => {
+      if ((t.date || '').startsWith(monthPrefix) && t.status === 'pago') {
+        if (t.type === 'receita') {
+          faturamento += Utils.toNumber(t.value);
+        } else if (t.type === 'despesa') {
+          totalDespesasPagas += Utils.toNumber(t.value);
+        }
+      }
+    });
+
+    // Se houver transações de despesa lançadas, usa o maior entre elas e a soma direta
+    // dos custos de material + repasses aos montadores concluídos do mês.
+    const despesasTotais = Math.max(totalDespesasPagas, gastosMaterial + repassesMontadores);
+    const lucroLiquido = faturamento - despesasTotais;
+
+    if (kpiFaturamento) {
+      kpiFaturamento.textContent = Utils.formatBRL(faturamento);
+      const cardTitle = kpiFaturamento.closest('.stat-card')?.querySelector('.stat-title');
+      if (cardTitle) cardTitle.textContent = 'Faturamento Mês';
+    }
+    if (kpiPendente) {
+      kpiPendente.textContent = Utils.formatBRL(pendente);
+      const cardTitle = kpiPendente.closest('.stat-card')?.querySelector('.stat-title');
+      if (cardTitle) cardTitle.textContent = 'A Receber';
+    }
     if (kpiConcluidos) kpiConcluidos.textContent = concluidos;
     if (kpiAgendados) kpiAgendados.textContent = agendados;
-    if (kpiLucro) kpiLucro.textContent = Utils.formatBRL(lucroLiquido);
-    if (kpiGastos) kpiGastos.textContent = Utils.formatBRL(gastosMaterial);
+    if (kpiLucro) {
+      kpiLucro.textContent = Utils.formatBRL(lucroLiquido);
+      const cardTitle = kpiLucro.closest('.stat-card')?.querySelector('.stat-title');
+      if (cardTitle) cardTitle.textContent = 'Lucro Líquido Mês';
+    }
+    if (kpiGastos) kpiGastos.textContent = Utils.formatBRL(despesasTotais);
 
     // Header Quick Pill
-    const headerPill = document.getElementById('header-quick-stat');
     if (headerPill) {
       headerPill.innerHTML = `<span class="dot"></span> ${todayServices.length} hoje &bull; ${Utils.formatBRL(lucroLiquido)} líquido no mês`;
     }

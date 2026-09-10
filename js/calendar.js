@@ -220,6 +220,41 @@ class CalendarController {
     const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodedAddress}`;
     const wazeUrl = `https://waze.com/ul?q=${encodedAddress}`;
 
+    const auth = window.authController;
+    const podeVerCheio = !auth || auth.podeVerValoresCheios();
+    const ehDono = Utils.isOwnerAssembler(service);
+    const pay = Utils.assemblerPay(service);
+    const sobra = Utils.ownerNet(service);
+
+    let priceBlockHtml = '';
+    if (!podeVerCheio) {
+      // Funcionário / Montador: só vê o que ele vai receber!
+      if (auth && auth.servicoEhMeu(service)) {
+        priceBlockHtml = `
+          <div class="service-price-val" style="color: var(--primary); font-weight: 800;">${Utils.formatBRL(pay)}</div>
+          <div class="service-price-net" style="color: var(--text-muted); font-size: 0.78rem;">Você recebe</div>
+        `;
+      } else {
+        priceBlockHtml = `
+          <div class="service-price-val" style="font-size: 0.85rem; color: var(--text-muted);">---</div>
+          <div class="service-price-net" style="font-size: 0.75rem;">Outro montador</div>
+        `;
+      }
+    } else {
+      // Administrador: vê o valor cobrado do cliente e o detalhamento da sobra / repasse
+      let subPriceHtml = '';
+      if (pay > 0 && !ehDono) {
+        subPriceHtml = `<div class="service-price-net" title="Sobra para você após repasse ao montador e custos">sobra <strong style="color: var(--success);">${Utils.formatBRL(sobra)}</strong> (montador ${Utils.formatBRL(pay)})</div>`;
+      } else if (cost > 0) {
+        subPriceHtml = `<div class="service-price-net" title="Total cobrado menos os gastos com material">líquido ${Utils.formatBRL(profit)}</div>`;
+      }
+
+      priceBlockHtml = `
+        <div class="service-price-val">${Utils.formatBRL(total)}</div>
+        ${subPriceHtml}
+      `;
+    }
+
     card.innerHTML = `
       <div class="service-item-left">
         <div class="client-avatar ${colorClass}">
@@ -240,8 +275,7 @@ class CalendarController {
       </div>
       <div class="service-item-right">
         <div class="service-price">
-          <div class="service-price-val">${Utils.formatBRL(total)}</div>
-          ${cost > 0 ? `<div class="service-price-net" title="Total cobrado menos os gastos com material">líquido ${Utils.formatBRL(profit)}</div>` : ''}
+          ${priceBlockHtml}
           <div style="display: flex; gap: 4px; justify-content: flex-end; margin-top: 4px;">
             <span class="badge ${statusClass}">
               ${statusLabel}
