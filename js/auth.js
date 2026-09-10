@@ -306,6 +306,9 @@ class AuthController {
   }
 
   applyRolePermissions(isAdmin) {
+    document.body.classList.toggle('is-admin', !!isAdmin);
+    document.body.classList.toggle('is-montador', !isAdmin);
+
     // Hide or show admin-only elements
     const adminElements = document.querySelectorAll('[data-admin-only="true"]');
     adminElements.forEach(el => {
