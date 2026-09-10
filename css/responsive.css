@@ -836,3 +836,390 @@ body.mobile-mode .pwa-install-banner {
     transform: translateY(0);
   }
 }
+
+/* ==========================================================================
+   CORREÇÃO DE ESTOURO HORIZONTAL E ALVOS DE TOQUE
+   
+   Medido em 320, 375, 412, 768, 1024 e 1440 px. A tela "corria" para o lado
+   em Início, Orçamentos, Lojas e Montadores.
+
+   Causa: item de grid e de flex nasce com min-width:auto e se recusa a
+   encolher abaixo do conteúdo. Um cartão com a descrição do móvel e o
+   endereço completo ficava com 522 px dentro de uma tela de 412 px, e
+   arrastava a página inteira junto.
+   ========================================================================== */
+
+/* Os contêineres podem encolher. */
+.grid-2 > *,
+.grid-3 > *,
+.grid-4 > *,
+.stats-grid > *,
+.money-grid > *,
+.dashboard-grid > *,
+.card > *,
+.card-header,
+.filter-bar > * {
+  min-width: 0;
+}
+
+/* Linhas em flex que seguravam a largura pelo conteúdo. */
+.service-item-card,
+.service-item-left,
+.service-item-right,
+.detail-client,
+.detail-client-info,
+.detail-row,
+.history-item,
+.history-main,
+.store-card,
+.store-card-footer,
+.assembler-chip,
+.customer-open-btn,
+.theme-row,
+.theme-info,
+.msg-item,
+.msg-text,
+.calc-item-row {
+  min-width: 0;
+}
+
+/* Texto longo (móvel, endereço, nome de cliente, e-mail do montador) quebra
+   em vez de empurrar a largura mínima do cartão. */
+.service-item-card h4,
+.service-item-card p,
+.service-item-left span,
+.detail-title,
+.detail-link,
+.detail-row strong,
+.history-main h5,
+.customer-detail-head h3,
+.store-card h4,
+.store-card p,
+.assembler-chip span,
+.msg-text strong,
+.msg-text small,
+.calc-item-row div,
+.receipt-block,
+.toast span {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* Nomes e endereços de uma linha só cortam com reticências. */
+.customer-open-btn h4,
+.customer-open-btn span,
+.assembler-chip strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Tabelas só rolam dentro do próprio quadro, nunca arrastando a página. */
+.receipt-table,
+.cash-book-table {
+  display: block;
+  width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Nenhuma imagem ou canvas pode ultrapassar o pai. */
+img,
+canvas,
+svg,
+video {
+  max-width: 100%;
+}
+
+/* Rede de segurança: a página nunca rola na horizontal. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* --------------------------------------------------------------------------
+   Menu inferior: cabe sem rolar de lado
+   O administrador tem 8 itens; somados davam 432 px numa tela de 412 px e a
+   barra rolava horizontalmente, escondendo Ajustes.
+   -------------------------------------------------------------------------- */
+/* As regras de mobile-mode acima fixam min-width:54px por item com
+   !important. Com os 8 itens do administrador isso dava 432 px numa tela de
+   320 px: a barra rolava de lado e escondia "Orçar" e "Ajustes". Aqui os
+   itens voltam a poder encolher e dividir a largura disponível. */
+.mobile-bottom-nav .bottom-nav-list,
+html.mobile-mode .bottom-nav-list,
+body.mobile-mode .bottom-nav-list {
+  overflow-x: visible !important;
+  justify-content: space-between !important;
+}
+
+.mobile-bottom-nav .bottom-nav-list > li,
+html.mobile-mode .bottom-nav-list > li,
+body.mobile-mode .bottom-nav-list > li {
+  flex: 1 1 0 !important;
+  min-width: 0 !important;
+}
+
+html.mobile-mode .bottom-nav-item,
+body.mobile-mode .bottom-nav-item {
+  padding-left: 2px !important;
+  padding-right: 2px !important;
+  gap: 2px !important;
+}
+
+.mobile-bottom-nav .bottom-nav-item {
+  width: 100%;
+  padding-left: 2px;
+  padding-right: 2px;
+}
+
+.mobile-bottom-nav .bottom-nav-item span,
+html.mobile-mode .bottom-nav-item span,
+body.mobile-mode .bottom-nav-item span {
+  display: block !important;
+  max-width: 100% !important;
+  font-size: 0.62rem !important;
+  line-height: 1.1 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+@media (max-width: 380px) {
+  .mobile-bottom-nav .bottom-nav-item span,
+  html.mobile-mode .bottom-nav-item span,
+  body.mobile-mode .bottom-nav-item span {
+    font-size: 0.54rem !important;
+  }
+  .mobile-bottom-nav .bottom-nav-item i,
+  html.mobile-mode .bottom-nav-item i,
+  body.mobile-mode .bottom-nav-item i {
+    font-size: 0.95rem !important;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Alvos de toque
+   Botões de 29 px e filtros de 31 px são pequenos para o dedo de quem está
+   numa obra. No touch eles crescem; no mouse continuam compactos.
+   -------------------------------------------------------------------------- */
+@media (hover: none) and (pointer: coarse) {
+  .btn-sm {
+    min-height: 40px !important;
+    padding: 9px 14px !important;
+  }
+
+  .pill-filter {
+    min-height: 38px !important;
+    padding: 9px 16px !important;
+  }
+
+  .btn-icon {
+    min-width: 40px !important;
+    min-height: 40px !important;
+  }
+
+  .theme-switch {
+    min-height: 34px !important;
+  }
+
+  .chip,
+  .pay-chip {
+    min-height: 36px;
+    display: inline-flex;
+    align-items: center;
+  }
+
+  /* Campo com menos de 16px faz o iOS dar zoom sozinho ao focar. */
+  .form-control,
+  input,
+  select,
+  textarea {
+    font-size: 16px;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Rótulos dos KPIs: quebram em vez de cortar
+
+   Estavam com white-space:nowrap e reticências, o que virava "Montagens
+   agendadas pa..." e "Agendamentos pende...". Duas linhas cabem no cartão e
+   a frase chega inteira; o clamp evita que um texto longo estique o cartão.
+   -------------------------------------------------------------------------- */
+.stat-subtitle,
+.grid-auto > .stat-card .stat-subtitle,
+.grid-auto > .stat-card:first-child .stat-subtitle,
+.grid-auto > .stat-card:not(:first-child) .stat-subtitle,
+html.mobile-mode .grid-auto > .stat-card .stat-subtitle,
+html.mobile-mode .grid-auto > .stat-card:first-child .stat-subtitle,
+html.mobile-mode .grid-auto > .stat-card:not(:first-child) .stat-subtitle,
+body.mobile-mode .grid-auto > .stat-card .stat-subtitle,
+body.mobile-mode .grid-auto > .stat-card:not(:first-child) .stat-subtitle {
+  white-space: normal !important;
+  overflow: hidden !important;
+  text-overflow: clip !important;
+  display: -webkit-box !important;
+  -webkit-box-orient: vertical !important;
+  -webkit-line-clamp: 2 !important;
+  line-clamp: 2 !important;
+  line-height: 1.25 !important;
+  overflow-wrap: anywhere !important;
+}
+
+/* O botão flutuante cobria o conteúdo do último cartão da lista. */
+@media (hover: none) and (pointer: coarse) {
+  .app-view.active .content-body,
+  #view-inicio,
+  #view-agenda,
+  #view-clientes {
+    padding-bottom: 12px;
+  }
+
+  .fab-btn {
+    bottom: calc(var(--bottom-nav-height, 64px) + 16px);
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Botões que não cabiam
+   No modal da nota são quatro (Fechar, Imprimir, Baixar PDF, Enviar). Com
+   justify-content:flex-end e sem quebra, eles transbordavam para a ESQUERDA
+   numa tela de 320 px e ficavam fora do alcance do dedo.
+   -------------------------------------------------------------------------- */
+.modal-footer {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.modal-footer > .btn {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+/* Botão com rótulo longo pode encolher em vez de esticar a linha. */
+.btn {
+  min-width: 0;
+}
+
+@media (max-width: 480px) {
+  .modal-footer {
+    gap: 8px;
+  }
+
+  .modal-footer > .btn {
+    flex: 1 1 100%;
+    justify-content: center;
+  }
+}
+
+/* Pares de botões lado a lado (orçamento, ações rápidas) quebram quando
+   o texto não couber, em vez de sair da tela. */
+.detail-actions,
+.quick-actions-grid,
+.store-card-footer,
+.service-actions {
+  flex-wrap: wrap;
+}
+
+.detail-actions > .btn,
+.quick-actions-grid > .btn,
+.service-actions > .btn {
+  min-width: 0;
+}
+
+/* Cartão de loja: a linha do topo (ícone, nome, WhatsApp, editar, excluir)
+   não cabia em 320 px e o botão de excluir ficava fora da tela. */
+@media (max-width: 380px) {
+  .store-card-head,
+  .store-card .card-header {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .store-card-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+
+  .owner-tag {
+    white-space: nowrap;
+    flex-shrink: 0;
+  }
+}
+
+/* Cartão de loja: os filhos precisam poder encolher, senão o nome da loja e
+   os três botões de ação seguram o cartão em 340 px numa tela de 320 px. */
+.store-card,
+.store-card-head,
+.store-open-btn,
+.store-open-text,
+.store-card-actions,
+.store-address {
+  min-width: 0;
+}
+
+.store-open-text,
+.store-open-text strong,
+.store-open-text span,
+.store-address {
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.store-card-head {
+  flex-wrap: wrap;
+}
+
+.store-open-btn {
+  flex: 1 1 140px;
+}
+
+.store-card-actions {
+  flex-shrink: 0;
+}
+
+/* A etiqueta "eu" do dono não pode empurrar a linha do montador. */
+.assembler-chip strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.owner-tag {
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* --------------------------------------------------------------------------
+   Grades com coluna de largura mínima fixa
+
+   repeat(auto-fill, minmax(340px, 1fr)) numa tela de 320 px produz uma coluna
+   de 340 px: o minimo do minmax ganha quando o espaco e menor que ele, e o
+   cartao de loja saia da tela inteiro. O min(...) faz a coluna ceder para
+   100% do espaco disponivel quando a tela e mais estreita que o mínimo.
+   -------------------------------------------------------------------------- */
+.stores-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(340px, 100%), 1fr));
+}
+
+.assembler-picker {
+  grid-template-columns: repeat(auto-fill, minmax(min(230px, 100%), 1fr));
+}
+
+.money-grid {
+  grid-template-columns: repeat(auto-fit, minmax(min(210px, 100%), 1fr));
+}
+
+.foto-grid {
+  grid-template-columns: repeat(auto-fill, minmax(min(88px, 30%), 1fr));
+}
+
+/* O nome do montador e a etiqueta "eu" viram uma linha que quebra, em vez de
+   a etiqueta escorregar 5 px para fora numa tela de 320 px. */
+.assembler-chip-info strong,
+.assembler-chip strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
