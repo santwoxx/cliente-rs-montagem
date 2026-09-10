@@ -7,17 +7,43 @@ const STORAGE_KEYS = {
   SERVICES: 'movelpro_services',
   TRANSACTIONS: 'movelpro_transactions',
   CUSTOMERS: 'movelpro_customers',
-  SETTINGS: 'movelpro_settings'
+  SETTINGS: 'movelpro_settings',
+  STORES: 'movelpro_stores',
+  ASSEMBLERS: 'movelpro_assemblers'
 };
+
+// Tipos de serviço pré-programados (chips do modal de agendamento).
+// O detalhe livre do serviço vai no campo de descrição/observações.
+const DEFAULT_SERVICE_TYPES = [
+  'Montagem',
+  'Instalação',
+  'Reparo',
+  'Manutenção',
+  'Consulta',
+  'Atendimento',
+  'Visita técnica',
+  'Diária'
+];
 
 const DEFAULT_SETTINGS = {
   montadorName: 'Rodrigo Silva',
   companyName: 'RS Montagens de Móveis',
   phone: '11987654321',
+  profession: 'Montador de Móveis',
+  cnpj: '',
+  address: '',
+  city: '',
   pixKey: '11987654321',
   pixType: 'Telefone',
+  bankName: '',
+  pixHolder: '',
+  logo: '',
   monthlyGoal: 5000,
+  theme: 'light',
   reviewLink: '',
+  facebookLink: '',
+  instagramLink: '',
+  serviceTypes: DEFAULT_SERVICE_TYPES.slice(),
   defaultPrices: [
     { id: 1, name: 'Guarda-Roupa 2 Portas', price: 120 },
     { id: 2, name: 'Guarda-Roupa 4 Portas', price: 180 },
@@ -91,7 +117,7 @@ const SEED_CUSTOMERS = [
 // Seed services matching the user's screenshot:
 // Setembro 2026: Dia 07 = Concluído, Dia 08 = Concluído, Dia 09 = Agendado (Eder)
 // cost = gastos com material do serviço (corrediça, dobradiça, parafuso...).
-// O cliente paga 'value'; o lucro líquido do montador é value - cost.
+// O cliente paga 'value' + 'travelFee'; o lucro líquido é esse total - cost.
 const SEED_SERVICES = [
   {
     id: 's1',
@@ -102,12 +128,16 @@ const SEED_SERVICES = [
     date: '2026-09-07',
     time: '09:00',
     description: 'Montagem Guarda-Roupa Casal 6 Portas + Painel TV',
+    serviceType: 'Montagem',
     value: 350.00,
+    travelFee: 0.00,
     cost: 0.00,
     status: 'concluido',
     paymentStatus: 'pago',
     paymentMethod: 'PIX',
     notes: 'Serviço finalizado com sucesso. Cliente avaliou 5 estrelas.',
+    assemblerId: 'a1',
+    assemblerName: 'Rodrigo Silva',
     createdAt: '2026-09-01T10:00:00Z'
   },
   {
@@ -119,12 +149,16 @@ const SEED_SERVICES = [
     date: '2026-09-08',
     time: '13:30',
     description: 'Montagem Mesa de Jantar 6 cadeiras + Buffet',
+    serviceType: 'Montagem',
     value: 220.00,
+    travelFee: 0.00,
     cost: 0.00,
     status: 'concluido',
     paymentStatus: 'pago',
     paymentMethod: 'Dinheiro',
     notes: 'Cliente pagou em espécie ao término.',
+    assemblerId: 'a1',
+    assemblerName: 'Rodrigo Silva',
     createdAt: '2026-09-02T12:00:00Z'
   },
   {
@@ -136,29 +170,38 @@ const SEED_SERVICES = [
     date: '2026-09-09',
     time: '10:00',
     description: 'Reparo e regulagem gavetas e dobradiças guarda-roupa',
+    serviceType: 'Reparo',
     value: 90.00,
+    travelFee: 20.00,
     cost: 30.00,
     status: 'agendado',
     paymentStatus: 'pendente',
     paymentMethod: 'PIX',
     notes: 'Levar parafusos adicionais e corrediças telescópicas de 40cm.',
+    assemblerId: 'a1',
+    assemblerName: 'Rodrigo Silva',
     createdAt: '2026-09-05T14:30:00Z'
   },
   {
     id: 's4',
     clientId: 'c4',
-    clientName: 'Loja TokLar Móveis (Cliente: Patrícia)',
+    clientName: 'Patrícia Lima (via Loja TokLar)',
     clientPhone: '11966554433',
     clientAddress: 'Rua Vergueiro, 2500 - Vila Mariana, SP',
     date: '2026-09-12',
     time: '14:00',
     description: 'Montagem Quarto de Bebê Completo (Berço + Cômoda + Roupeiro)',
+    serviceType: 'Montagem',
+    storeId: 'st1',
     value: 380.00,
+    travelFee: 40.00,
     cost: 45.00,
     status: 'agendado',
     paymentStatus: 'pendente',
     paymentMethod: 'PIX',
     notes: 'Ordem de serviço entregue pela loja.',
+    assemblerId: 'a1',
+    assemblerName: 'Rodrigo Silva',
     createdAt: '2026-09-06T16:00:00Z'
   },
   {
@@ -170,12 +213,16 @@ const SEED_SERVICES = [
     date: '2026-09-16',
     time: '11:00',
     description: 'Instalação de Painel Ripado com Suporte TV articulado',
+    serviceType: 'Instalação',
     value: 180.00,
+    travelFee: 0.00,
     cost: 60.00,
     status: 'agendado',
     paymentStatus: 'pendente',
     paymentMethod: 'Cartão de Crédito',
     notes: 'Cliente quer passar no cartão.',
+    assemblerId: 'a1',
+    assemblerName: 'Rodrigo Silva',
     createdAt: '2026-09-07T18:00:00Z'
   }
 ];
@@ -241,6 +288,32 @@ const SEED_TRANSACTIONS = [
   }
 ];
 
+// Lojas parceiras: agrupam as montagens repassadas por cada loja e permitem
+// emitir uma nota única somando todos os serviços do período.
+const SEED_STORES = [
+  {
+    id: 'st1',
+    name: 'Loja TokLar Móveis',
+    contactName: 'Setor de Entregas',
+    phone: '11966554433',
+    cnpj: '',
+    address: 'Rua do Gasômetro, 300 - Brás, São Paulo - SP',
+    notes: 'Repassa montagens semanais em domicílio.',
+    createdAt: '2026-08-15T14:00:00Z'
+  }
+];
+
+// Montadores da equipe. O primeiro é o próprio dono, que também executa serviços.
+const SEED_ASSEMBLERS = [
+  {
+    id: 'a1',
+    name: 'Rodrigo Silva',
+    phone: '11987654321',
+    isOwner: true,
+    createdAt: '2026-08-01T09:00:00Z'
+  }
+];
+
 class StorageManager {
   constructor() {
     this.init();
@@ -259,6 +332,12 @@ class StorageManager {
     if (!localStorage.getItem(STORAGE_KEYS.TRANSACTIONS)) {
       this.save(STORAGE_KEYS.TRANSACTIONS, SEED_TRANSACTIONS);
     }
+    if (!localStorage.getItem(STORAGE_KEYS.STORES)) {
+      this.save(STORAGE_KEYS.STORES, SEED_STORES);
+    }
+    if (!localStorage.getItem(STORAGE_KEYS.ASSEMBLERS)) {
+      this.save(STORAGE_KEYS.ASSEMBLERS, SEED_ASSEMBLERS);
+    }
 
     this.runMigrations();
   }
@@ -269,6 +348,7 @@ class StorageManager {
    */
   runMigrations() {
     // v2: campo "cost" (gastos com material) passou a existir em cada serviço.
+    // v3: tipo de serviço, deslocamento, montador responsável e loja parceira.
     const services = this.get(STORAGE_KEYS.SERVICES) || [];
     let changed = false;
 
@@ -277,10 +357,61 @@ class StorageManager {
         s.cost = 0;
         changed = true;
       }
+      if (typeof s.travelFee !== 'number') {
+        s.travelFee = 0;
+        changed = true;
+      }
+      if (typeof s.serviceType !== 'string') {
+        s.serviceType = 'Montagem';
+        changed = true;
+      }
+      if (s.assemblerId === undefined) {
+        s.assemblerId = null;
+        s.assemblerName = '';
+        changed = true;
+      }
+      if (s.storeId === undefined) {
+        s.storeId = null;
+        changed = true;
+      }
     });
 
     if (changed) {
       this.save(STORAGE_KEYS.SERVICES, services);
+    }
+
+    // v3: campos novos do perfil profissional e das redes sociais.
+    const settings = this.get(STORAGE_KEYS.SETTINGS);
+    if (settings) {
+      let settingsChanged = false;
+      const defaults = {
+        profession: 'Montador de Móveis',
+        cnpj: '',
+        address: '',
+        city: '',
+        bankName: '',
+        pixHolder: '',
+        logo: '',
+        theme: 'light',
+        facebookLink: '',
+        instagramLink: ''
+      };
+
+      Object.entries(defaults).forEach(([key, value]) => {
+        if (settings[key] === undefined) {
+          settings[key] = value;
+          settingsChanged = true;
+        }
+      });
+
+      if (!Array.isArray(settings.serviceTypes) || settings.serviceTypes.length === 0) {
+        settings.serviceTypes = DEFAULT_SERVICE_TYPES.slice();
+        settingsChanged = true;
+      }
+
+      if (settingsChanged) {
+        this.save(STORAGE_KEYS.SETTINGS, settings);
+      }
     }
   }
 
@@ -335,6 +466,26 @@ class StorageManager {
     return res;
   }
 
+  getStores() {
+    return this.get(STORAGE_KEYS.STORES) || [];
+  }
+
+  saveStores(stores) {
+    const res = this.save(STORAGE_KEYS.STORES, stores);
+    this.syncToFirestore('stores', stores);
+    return res;
+  }
+
+  getAssemblers() {
+    return this.get(STORAGE_KEYS.ASSEMBLERS) || [];
+  }
+
+  saveAssemblers(assemblers) {
+    const res = this.save(STORAGE_KEYS.ASSEMBLERS, assemblers);
+    this.syncToFirestore('assemblers', assemblers);
+    return res;
+  }
+
   getSettings() {
     return this.get(STORAGE_KEYS.SETTINGS) || DEFAULT_SETTINGS;
   }
@@ -362,7 +513,7 @@ class StorageManager {
   async syncFromFirestore() {
     if (!window.firestoreDb || !window.firebaseAuth || !window.firebaseAuth.currentUser) return;
     try {
-      const collections = ['services', 'customers', 'transactions', 'settings'];
+      const collections = ['services', 'customers', 'transactions', 'settings', 'stores', 'assemblers'];
       let hasUpdates = false;
 
       for (const col of collections) {
@@ -401,7 +552,9 @@ class StorageManager {
       settings: this.getSettings(),
       customers: this.getCustomers(),
       services: this.getServices(),
-      transactions: this.getTransactions()
+      transactions: this.getTransactions(),
+      stores: this.getStores(),
+      assemblers: this.getAssemblers()
     };
     
     const blob = new Blob([JSON.stringify(backupData, null, 2)], { type: 'application/json' });
@@ -420,6 +573,9 @@ class StorageManager {
       if (data.customers) this.saveCustomers(data.customers);
       if (data.services) this.saveServices(data.services);
       if (data.transactions) this.saveTransactions(data.transactions);
+      if (data.stores) this.saveStores(data.stores);
+      if (data.assemblers) this.saveAssemblers(data.assemblers);
+      this.runMigrations();
       return { success: true };
     } catch (e) {
       return { success: false, error: e.message };
@@ -431,6 +587,8 @@ class StorageManager {
     localStorage.removeItem(STORAGE_KEYS.CUSTOMERS);
     localStorage.removeItem(STORAGE_KEYS.SERVICES);
     localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
+    localStorage.removeItem(STORAGE_KEYS.STORES);
+    localStorage.removeItem(STORAGE_KEYS.ASSEMBLERS);
     this.init();
   }
 }

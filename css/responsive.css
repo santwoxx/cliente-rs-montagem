@@ -5,11 +5,19 @@
 
 /* Large Desktop (> 1024px) */
 @media (min-width: 1025px) {
+  /* minmax(0, 1fr) em vez de 1fr: sem isso a coluna da direita assume a
+     largura mínima do conteúdo e empurra a página para fora da tela. */
   .agenda-container-desktop {
     display: grid;
-    grid-template-columns: 500px 1fr;
+    grid-template-columns: 500px minmax(0, 1fr);
     gap: 32px;
     align-items: flex-start;
+  }
+
+  /* No desktop o cabeçalho já tem "Novo Serviço"; o botão flutuante só
+     cobriria o canto inferior direito do conteúdo. */
+  .fab-btn {
+    display: none;
   }
 
   .calendar-card {
@@ -59,15 +67,25 @@
     display: block;
   }
 
-  /* Reset Main Margin */
+  /* Reset Main Margin.
+     min-width: 0 impede que um conteúdo largo (tabela, pílula do header)
+     estique a coluna principal e crie rolagem horizontal na página. */
   .app-main {
     margin-left: 0;
     padding-bottom: calc(var(--bottom-nav-height) + 24px);
+    min-width: 0;
+    max-width: 100%;
   }
 
-  /* Header Mobile */
+  /* Header Mobile: só o título.
+     Novo serviço fica no botão flutuante e Sair fica em Ajustes. */
   .app-header {
     padding: 0 16px;
+    min-width: 0;
+  }
+
+  .header-title-area {
+    min-width: 0;
   }
 
   .header-title-area h2 {
@@ -78,9 +96,20 @@
     display: none;
   }
 
-  .quick-stats-pill {
-    padding: 6px 12px;
-    font-size: 0.78rem;
+  .header-actions {
+    display: none;
+  }
+
+  /* Tabelas largas rolam dentro do próprio contêiner */
+  .table-responsive {
+    max-width: 100%;
+    overflow-x: auto;
+  }
+
+  .content-body,
+  .app-view {
+    min-width: 0;
+    max-width: 100%;
   }
 
   /* Content spacing */

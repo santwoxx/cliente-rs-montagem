@@ -9,6 +9,8 @@ class App {
   }
 
   init() {
+    this.applyTheme(window.storageManager.getSettings().theme);
+
     this.bindNavigation();
     this.bindModals();
     this.bindSettings();
@@ -23,6 +25,8 @@ class App {
     window.servicesController.init();
     window.financeController.init();
     window.customersController.init();
+    window.storesController.init();
+    window.assemblersController.init();
     window.quotesController.init();
 
     // Default start view is Agenda (matching user's screenshot) or Início
@@ -71,11 +75,15 @@ class App {
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Refresh charts if entering financeiro
+    // Recarrega a tela de destino com os dados mais recentes
     if (viewId === 'view-financeiro') {
       window.financeController.render();
-    } else if (viewId === 'view-dashboard') {
+    } else if (viewId === 'view-inicio') {
       this.updateDashboardKPIs();
+    } else if (viewId === 'view-montadores') {
+      window.assemblersController.render();
+    } else if (viewId === 'view-lojas') {
+      window.storesController.render();
     }
   }
 
@@ -88,6 +96,8 @@ class App {
       'view-agenda': { title: '<i class="fa-regular fa-calendar-days" style="color: var(--primary);"></i> Agenda', subtitle: 'Visualize seus serviços por data' },
       'view-financeiro': { title: '<i class="fa-solid fa-wallet" style="color: var(--primary);"></i> Controle Financeiro', subtitle: 'Fluxo de caixa, receitas, despesas e metas' },
       'view-clientes': { title: '<i class="fa-solid fa-users" style="color: var(--primary);"></i> Clientes', subtitle: 'Gestão da sua carteira de clientes' },
+      'view-montadores': { title: '<i class="fa-solid fa-helmet-safety" style="color: var(--primary);"></i> Painel dos Montadores', subtitle: 'Escolha um montador e veja as montagens que ele fez' },
+      'view-lojas': { title: '<i class="fa-solid fa-store" style="color: var(--primary);"></i> Lojas Parceiras', subtitle: 'Montagens por loja e nota única somando todos os serviços' },
       'view-orcamentos': { title: '<i class="fa-solid fa-calculator" style="color: var(--primary);"></i> Orçamentos & Preços', subtitle: 'Calculadora de montagem rápida e orçamentos para WhatsApp' },
       'view-ajustes': { title: '<i class="fa-solid fa-gear" style="color: var(--primary);"></i> Configurações', subtitle: 'Perfil, Chave PIX, Metas e Backup dos dados' }
     };
@@ -105,6 +115,10 @@ class App {
           window.financeController.openTransactionModal('receita');
         } else if (this.currentView === 'view-clientes') {
           window.customersController.openCustomerModal();
+        } else if (this.currentView === 'view-lojas') {
+          window.storesController.openStoreModal();
+        } else if (this.currentView === 'view-montadores') {
+          window.assemblersController.openAssemblerModal();
         } else {
           window.servicesController.openNewServiceModal(window.calendarController.selectedDate);
         }
@@ -205,7 +219,7 @@ class App {
           gastosMaterial += Utils.toNumber(s.cost);
         } else if (s.status === 'agendado') {
           agendados++;
-          pendente += Utils.toNumber(s.value);
+          pendente += Utils.serviceTotal(s);
         }
       }
     });
@@ -220,7 +234,7 @@ class App {
     const lucroLiquido = faturamento - gastosMaterial;
 
     // Render Today list on Dashboard
-    const todayServices = services.filter(s => s.date === todayStr);
+    const todayServices = services.filter(s => s.date === todayStr && s.status !== 'cancelado');
     const todayContainer = document.getElementById('dash-today-services');
     if (todayContainer) {
       if (todayServices.length === 0) {
@@ -269,6 +283,40 @@ class App {
     window.calendarController.render();
     window.financeController.render();
     window.customersController.render();
+    window.storesController.render();
+    window.assemblersController.render();
+  }
+
+  /* ---------- Tema claro / escuro ---------- */
+
+  applyTheme(theme) {
+    const isDark = theme === 'dark';
+    document.documentElement.setAttribute('data-theme', isDark ? 'dark' : 'light');
+
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) meta.setAttribute('content', isDark ? '#0F172A' : '#FF5E1E');
+
+    const icon = document.getElementById('theme-icon');
+    if (icon) icon.className = isDark ? 'fa-solid fa-moon' : 'fa-solid fa-sun';
+
+    const subtitle = document.getElementById('theme-subtitle');
+    if (subtitle) subtitle.textContent = isDark ? 'Modo escuro ativo' : 'Modo claro ativo';
+
+    const toggle = document.getElementById('btn-toggle-theme');
+    if (toggle) {
+      toggle.classList.toggle('is-on', isDark);
+      toggle.setAttribute('aria-checked', String(isDark));
+    }
+  }
+
+  toggleTheme() {
+    const settings = window.storageManager.getSettings();
+    settings.theme = settings.theme === 'dark' ? 'light' : 'dark';
+    window.storageManager.saveSettings(settings);
+    this.applyTheme(settings.theme);
+
+    // Os gráficos precisam ser redesenhados com as cores do novo tema.
+    window.financeController.render();
   }
 
   bindSettings() {
@@ -277,6 +325,55 @@ class App {
       settingsForm.addEventListener('submit', (e) => {
         e.preventDefault();
         this.saveSettings();
+      });
+    }
+
+    // Alternância de tema
+    const themeBtn = document.getElementById('btn-toggle-theme');
+    if (themeBtn) {
+      themeBtn.addEventListener('click', () => this.toggleTheme());
+    }
+
+    // Upload da logo usada na nota de serviço
+    const logoInput = document.getElementById('set-logo-input');
+    if (logoInput) {
+      logoInput.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+          this.showToast('Selecione um arquivo de imagem.', 'danger');
+          return;
+        }
+
+        // A logo é guardada como data URL, então precisa caber no localStorage.
+        if (file.size > 900 * 1024) {
+          this.showToast('Imagem muito grande. Use uma logo de até 900 KB.', 'danger');
+          e.target.value = '';
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (evt) => {
+          const settings = window.storageManager.getSettings();
+          settings.logo = evt.target.result;
+          window.storageManager.saveSettings(settings);
+          this.renderLogoPreview(settings.logo);
+          this.showToast('Logo atualizada com sucesso!', 'success');
+        };
+        reader.readAsDataURL(file);
+        e.target.value = '';
+      });
+    }
+
+    const removeLogoBtn = document.getElementById('btn-remove-logo');
+    if (removeLogoBtn) {
+      removeLogoBtn.addEventListener('click', () => {
+        const settings = window.storageManager.getSettings();
+        settings.logo = '';
+        window.storageManager.saveSettings(settings);
+        this.renderLogoPreview('');
+        this.showToast('Logo removida.', 'warning');
       });
     }
 
@@ -333,25 +430,54 @@ class App {
 
     setField('set-montador-name', s.montadorName);
     setField('set-company-name', s.companyName);
+    setField('set-profession', s.profession);
+    setField('set-cnpj', s.cnpj);
     setField('set-phone', s.phone);
+    setField('set-address', s.address);
+    setField('set-city', s.city);
     setField('set-pix-key', s.pixKey);
-    setField('set-review-link', s.reviewLink || '');
     setField('set-pix-type', s.pixType);
+    setField('set-bank-name', s.bankName);
+    setField('set-pix-holder', s.pixHolder);
+    setField('set-review-link', s.reviewLink);
+    setField('set-facebook-link', s.facebookLink);
+    setField('set-instagram-link', s.instagramLink);
     setField('set-monthly-goal', s.monthlyGoal);
+
+    this.renderLogoPreview(s.logo);
 
     // Update sidebar pro name
     const proName = document.querySelector('.pro-name');
     if (proName) proName.textContent = s.montadorName || 'RS Montagens';
   }
 
+  renderLogoPreview(logo) {
+    const preview = document.getElementById('set-logo-preview');
+    if (!preview) return;
+
+    preview.innerHTML = logo
+      ? `<img src="${Utils.escapeHtml(logo)}" alt="Logo da empresa">`
+      : '<i class="fa-regular fa-image"></i>';
+  }
+
   saveSettings() {
     const s = window.storageManager.getSettings();
-    s.montadorName = document.getElementById('set-montador-name').value.trim();
-    s.companyName = document.getElementById('set-company-name').value.trim();
-    s.phone = document.getElementById('set-phone').value.trim();
-    s.pixKey = document.getElementById('set-pix-key').value.trim();
-    s.reviewLink = document.getElementById('set-review-link').value.trim();
+    const readField = (id) => (document.getElementById(id)?.value || '').trim();
+
+    s.montadorName = readField('set-montador-name');
+    s.companyName = readField('set-company-name');
+    s.profession = readField('set-profession');
+    s.cnpj = readField('set-cnpj');
+    s.phone = readField('set-phone');
+    s.address = readField('set-address');
+    s.city = readField('set-city');
+    s.pixKey = readField('set-pix-key');
     s.pixType = document.getElementById('set-pix-type').value;
+    s.bankName = readField('set-bank-name');
+    s.pixHolder = readField('set-pix-holder');
+    s.reviewLink = readField('set-review-link');
+    s.facebookLink = readField('set-facebook-link');
+    s.instagramLink = readField('set-instagram-link');
     s.monthlyGoal = parseFloat(document.getElementById('set-monthly-goal').value) || 5000;
 
     window.storageManager.saveSettings(s);

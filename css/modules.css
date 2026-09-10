@@ -1,0 +1,673 @@
+/* ==========================================================================
+   MOVELPRO - MÓDULOS ADICIONAIS
+   Chips de tipo de serviço, painel dos montadores, lojas parceiras,
+   nota de serviço, aparência (tema) e uploader de logo.
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Chips de tipo de serviço (pré-programados no modal de agendamento)
+   -------------------------------------------------------------------------- */
+.chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.chip {
+  padding: 7px 14px;
+  border-radius: var(--radius-full);
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-app);
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.83rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.chip:hover {
+  border-color: var(--primary);
+  color: var(--primary);
+}
+
+.chip.is-active {
+  background: var(--primary);
+  border-color: var(--primary);
+  color: #fff;
+  box-shadow: var(--shadow-glow);
+}
+
+/* Etiqueta compacta do tipo de serviço nas listagens */
+.type-tag {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.01em;
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.detail-type-tag {
+  display: inline-block;
+  padding: 4px 12px;
+  border-radius: var(--radius-full);
+  background: var(--primary-light);
+  color: var(--primary);
+  font-size: 0.78rem;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.badge-cancelado {
+  background: var(--bg-card-hover);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+.service-item-card.is-cancelado {
+  opacity: 0.62;
+}
+
+.profit-preview.is-total {
+  color: var(--primary);
+}
+
+.filter-label {
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-right: 4px;
+}
+
+.header-hint {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.table-subtext {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.clickable-row {
+  cursor: pointer;
+}
+
+.custom-table tfoot td {
+  padding: 14px 16px;
+  border-top: 2px solid var(--border-color);
+}
+
+/* --------------------------------------------------------------------------
+   Aparência: interruptor de tema claro / escuro
+   -------------------------------------------------------------------------- */
+.theme-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.theme-info {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-width: 0;
+}
+
+.theme-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--warning-light);
+  color: var(--warning);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.1rem;
+}
+
+.theme-title {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.theme-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.theme-switch {
+  width: 56px;
+  height: 30px;
+  flex-shrink: 0;
+  border: none;
+  border-radius: var(--radius-full);
+  background: var(--border-color);
+  padding: 3px;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.theme-switch.is-on {
+  background: var(--primary);
+}
+
+.theme-switch-knob {
+  display: block;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: var(--shadow-sm);
+  transition: var(--transition);
+}
+
+.theme-switch.is-on .theme-switch-knob {
+  transform: translateX(26px);
+}
+
+/* --------------------------------------------------------------------------
+   Ajustes: rótulos de seção, uploader de logo e checkbox
+   -------------------------------------------------------------------------- */
+.settings-section-label {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  margin: 22px 0 14px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border-color);
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--text-main);
+}
+
+.settings-section-label small {
+  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.logo-uploader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.logo-preview {
+  width: 110px;
+  height: 110px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  border: 1.5px dashed var(--border-color);
+  background: var(--bg-app);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  color: var(--text-light);
+  font-size: 1.8rem;
+}
+
+.logo-preview img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.logo-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.checkbox-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: var(--text-main);
+  cursor: pointer;
+}
+
+.checkbox-row input {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   Painel dos montadores
+   -------------------------------------------------------------------------- */
+.assembler-picker {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+  gap: 12px;
+}
+
+.assembler-chip {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-color);
+  background: var(--bg-app);
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.assembler-chip:hover {
+  border-color: var(--primary);
+}
+
+.assembler-chip.is-selected {
+  border-color: var(--primary);
+  background: var(--primary-light);
+}
+
+.assembler-chip-info {
+  min-width: 0;
+}
+
+.assembler-chip-info strong {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.assembler-chip-info span {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.owner-tag {
+  display: inline-block;
+  padding: 1px 7px;
+  border-radius: var(--radius-full);
+  background: var(--success-light);
+  color: var(--success-dark);
+  font-size: 0.68rem;
+  font-weight: 800;
+  vertical-align: middle;
+}
+
+/* --------------------------------------------------------------------------
+   Lojas parceiras
+   -------------------------------------------------------------------------- */
+.stores-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 20px;
+}
+
+.store-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.store-card.is-selected {
+  border-color: var(--primary);
+  box-shadow: var(--shadow-glow);
+}
+
+.store-card-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.store-open-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: none;
+  border: none;
+  padding: 0;
+  text-align: left;
+  font-family: inherit;
+  cursor: pointer;
+  min-width: 0;
+}
+
+/* min-width: 0 é o que permite o nome longo encurtar em vez de
+   empurrar os botões de ação para fora do card. */
+.store-open-text {
+  min-width: 0;
+}
+
+.store-open-btn h4 {
+  font-size: 1.02rem;
+  font-weight: 800;
+  color: var(--text-main);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.store-open-btn span {
+  display: block;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.store-metric-hint {
+  display: block;
+}
+
+.store-avatar {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: var(--radius-md);
+  background: var(--primary-light);
+  color: var(--primary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.05rem;
+}
+
+.store-card-actions {
+  display: flex;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.store-address {
+  font-size: 0.83rem;
+  color: var(--text-muted);
+  margin-bottom: 12px;
+}
+
+.store-address i {
+  color: var(--primary);
+}
+
+.store-address a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.store-card-footer {
+  padding-top: 12px;
+  border-top: 1px solid var(--border-color);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+}
+
+.store-metric-label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.store-metric-value {
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: var(--success-dark);
+}
+
+.store-metric-hint {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+/* --------------------------------------------------------------------------
+   Nota de serviço (tela e impressão)
+   -------------------------------------------------------------------------- */
+.printable-receipt {
+  padding: 26px;
+  border: 2px solid #E2E8F0;
+  border-radius: var(--radius-md);
+  background: #fff;
+  color: #0F172A;
+}
+
+.receipt-header {
+  text-align: center;
+  border-bottom: 2px dashed #CBD5E1;
+  padding-bottom: 16px;
+  margin-bottom: 20px;
+}
+
+.receipt-logo {
+  max-width: 150px;
+  max-height: 90px;
+  object-fit: contain;
+  margin-bottom: 10px;
+}
+
+.receipt-header h2 {
+  font-size: 1.45rem;
+  font-weight: 800;
+  color: #FF5E1E;
+}
+
+.receipt-header p {
+  font-size: 0.86rem;
+  color: #64748B;
+}
+
+.receipt-doc-title {
+  margin-top: 10px;
+  font-weight: 800;
+  font-size: 1.05rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #0F172A;
+}
+
+.receipt-block {
+  background: #F8FAFC;
+  border: 1px solid #E2E8F0;
+  padding: 14px;
+  border-radius: var(--radius-sm);
+  margin-bottom: 16px;
+  line-height: 1.7;
+  font-size: 0.9rem;
+}
+
+.receipt-pix {
+  background: #FFF7ED;
+  border-color: #FED7AA;
+}
+
+.receipt-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 16px;
+  font-size: 0.88rem;
+}
+
+.receipt-table th {
+  text-align: left;
+  padding: 10px 12px;
+  background: #F1F5F9;
+  border-bottom: 2px solid #E2E8F0;
+  font-weight: 800;
+  font-size: 0.78rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #475569;
+}
+
+.receipt-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #E2E8F0;
+  vertical-align: top;
+}
+
+.receipt-table tfoot td {
+  border-top: 2px solid #CBD5E1;
+  border-bottom: none;
+  font-size: 1rem;
+  color: #0F172A;
+}
+
+.receipt-signatures {
+  margin-top: 40px;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.receipt-signatures > div {
+  width: 45%;
+  border-top: 1px solid #94A3B8;
+  text-align: center;
+  padding-top: 8px;
+  font-size: 0.84rem;
+}
+
+.receipt-signatures span {
+  color: #64748B;
+}
+
+/* O botão flutuante fica sobre o conteúdo: reserva de espaço no final da página
+   para ele não cobrir a última linha (o total da nota, por exemplo). */
+.content-body {
+  padding-bottom: 110px;
+}
+
+/* --------------------------------------------------------------------------
+   Card de serviço: em colunas estreitas (agenda no desktop) as duas metades
+   precisam poder quebrar, senão os botões de ação vazam para fora do card.
+   -------------------------------------------------------------------------- */
+.service-item-card {
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.service-item-left {
+  flex: 1 1 240px;
+  min-width: 0;
+}
+
+.service-info {
+  min-width: 0;
+}
+
+.service-info h4,
+.service-desc {
+  overflow-wrap: anywhere;
+}
+
+.service-item-right {
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 12px;
+}
+
+.service-meta {
+  flex-wrap: wrap;
+  row-gap: 4px;
+}
+
+.service-address-link {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.service-item-card.is-cancelado {
+  border-left: 5px solid var(--text-light);
+}
+
+/* --------------------------------------------------------------------------
+   Superfícies com cor fixa que precisam acompanhar o tema escuro
+   -------------------------------------------------------------------------- */
+:root[data-theme="dark"] .mobile-bottom-nav,
+:root[data-theme="dark"] .app-header {
+  background: rgba(19, 28, 46, 0.98);
+}
+
+:root[data-theme="dark"] .app-sidebar {
+  background: var(--bg-card);
+}
+
+/* --------------------------------------------------------------------------
+   Barra inferior do celular: agora com 8 destinos, o texto precisa caber
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .mobile-bottom-nav {
+    padding: 0 2px;
+  }
+
+  .bottom-nav-list {
+    justify-content: space-between;
+  }
+
+  .bottom-nav-item {
+    gap: 3px;
+    padding: 6px 1px;
+    font-size: 0.6rem;
+    min-width: 0;
+  }
+
+  .bottom-nav-item i {
+    font-size: 1.12rem;
+  }
+
+  .bottom-nav-item span {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Responsivo
+   -------------------------------------------------------------------------- */
+@media (max-width: 768px) {
+  .assembler-picker {
+    grid-template-columns: 1fr;
+  }
+
+  .theme-row {
+    gap: 12px;
+  }
+
+  .store-card-footer {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .receipt-signatures {
+    flex-direction: column;
+    gap: 32px;
+  }
+
+  .receipt-signatures > div {
+    width: 100%;
+  }
+}

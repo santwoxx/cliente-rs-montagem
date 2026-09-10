@@ -7,6 +7,9 @@
   <meta name="theme-color" content="#FF5E1E">
   <title>RS Montagens | Sistema do Montador de Móveis</title>
 
+  <!-- Ícone da aba (SVG embutido: sem requisição extra e sem 404 de favicon) -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23FF5E1E'/><text x='50' y='68' font-family='Segoe UI,Arial,sans-serif' font-size='52' font-weight='bold' fill='white' text-anchor='middle'>RS</text></svg>">
+
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -20,6 +23,7 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/calendar.css">
   <link rel="stylesheet" href="css/detail.css">
+  <link rel="stylesheet" href="css/modules.css">
   <link rel="stylesheet" href="css/responsive.css">
   <link rel="stylesheet" href="css/print.css">
 
@@ -62,6 +66,14 @@
         <button class="nav-item" data-view-target="view-clientes">
           <i class="fa-solid fa-users"></i>
           <span>Clientes</span>
+        </button>
+        <button class="nav-item" data-view-target="view-montadores" data-admin-only="true">
+          <i class="fa-solid fa-helmet-safety"></i>
+          <span>Montadores</span>
+        </button>
+        <button class="nav-item" data-view-target="view-lojas" data-admin-only="true">
+          <i class="fa-solid fa-store"></i>
+          <span>Lojas</span>
         </button>
         <button class="nav-item" data-view-target="view-orcamentos">
           <i class="fa-solid fa-calculator"></i>
@@ -426,6 +438,64 @@
         </section>
 
         <!-- ===============================================================
+             VIEW: PAINEL DOS MONTADORES
+             Escolha um montador e veja exatamente quais montagens ele fez.
+             =============================================================== -->
+        <section id="view-montadores" class="app-view" data-admin-only="true">
+          <div class="filter-bar">
+            <div class="filter-group">
+              <span class="filter-label">Período:</span>
+              <button class="pill-filter" data-assembler-period="month">Este Mês</button>
+              <button class="pill-filter" data-assembler-period="year">Este Ano</button>
+              <button class="pill-filter active" data-assembler-period="all">Tudo</button>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btn-new-assembler">
+              <i class="fa-solid fa-user-plus"></i> Novo Montador
+            </button>
+          </div>
+
+          <div class="card" style="margin-bottom: 24px;">
+            <div class="card-header">
+              <h3 class="card-title"><i class="fa-solid fa-helmet-safety"></i> Escolha o montador</h3>
+              <span class="header-hint">Toque em um montador para ver as montagens dele</span>
+            </div>
+            <div class="assembler-picker" id="assembler-picker">
+              <!-- Renderizado em assemblers.js -->
+            </div>
+          </div>
+
+          <div id="assembler-detail-panel">
+            <!-- Renderizado em assemblers.js -->
+          </div>
+        </section>
+
+        <!-- ===============================================================
+             VIEW: LOJAS PARCEIRAS
+             Agrupa as montagens repassadas por cada loja e emite a nota única.
+             =============================================================== -->
+        <section id="view-lojas" class="app-view" data-admin-only="true">
+          <div class="filter-bar">
+            <div class="filter-group">
+              <span class="filter-label">Período:</span>
+              <button class="pill-filter" data-store-period="month">Este Mês</button>
+              <button class="pill-filter" data-store-period="year">Este Ano</button>
+              <button class="pill-filter active" data-store-period="all">Tudo</button>
+            </div>
+            <button class="btn btn-primary btn-sm" id="btn-new-store">
+              <i class="fa-solid fa-store"></i> Nova Loja
+            </button>
+          </div>
+
+          <div class="stores-grid" id="stores-list-container">
+            <!-- Renderizado em stores.js -->
+          </div>
+
+          <div id="store-detail-panel" style="margin-top: 24px;">
+            <!-- Renderizado em stores.js -->
+          </div>
+        </section>
+
+        <!-- ===============================================================
              VIEW 5: ORÇAMENTOS & CALCULADORA
              =============================================================== -->
         <section id="view-orcamentos" class="app-view">
@@ -537,17 +607,44 @@
                   <label class="form-label">Nome Completo do Montador</label>
                   <input type="text" id="set-montador-name" class="form-control" required>
                 </div>
-                <div class="form-group">
-                  <label class="form-label">Nome da Empresa / Nome Comercial</label>
-                  <input type="text" id="set-company-name" class="form-control" required>
-                </div>
-                <div class="form-group">
-                  <label class="form-label">WhatsApp Profissional</label>
-                  <input type="text" id="set-phone" class="form-control" required>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Nome / Razão Social</label>
+                    <input type="text" id="set-company-name" class="form-control" required>
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Profissão</label>
+                    <input type="text" id="set-profession" class="form-control" placeholder="Ex: Montador de Móveis">
+                  </div>
                 </div>
                 <div class="form-row">
                   <div class="form-group">
-                    <label class="form-label">Chave PIX (para orçamentos e recibos)</label>
+                    <label class="form-label">CNPJ ou MEI</label>
+                    <input type="text" id="set-cnpj" class="form-control" placeholder="00.000.000/0000-00">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">WhatsApp Profissional</label>
+                    <input type="text" id="set-phone" class="form-control" required>
+                  </div>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Endereço</label>
+                    <input type="text" id="set-address" class="form-control" placeholder="Rua, número, bairro">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Cidade / Estado</label>
+                    <input type="text" id="set-city" class="form-control" placeholder="Pindamonhangaba - SP">
+                  </div>
+                </div>
+
+                <div class="settings-section-label">
+                  <i class="fa-solid fa-wallet" style="color: var(--primary);"></i> Dados do PIX
+                  <small>Enviados ao cliente quando o serviço é concluído.</small>
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Chave PIX</label>
                     <input type="text" id="set-pix-key" class="form-control" required>
                   </div>
                   <div class="form-group">
@@ -561,23 +658,86 @@
                     </select>
                   </div>
                 </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label">Banco</label>
+                    <input type="text" id="set-bank-name" class="form-control" placeholder="Ex: Stone">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label">Nome do Titular</label>
+                    <input type="text" id="set-pix-holder" class="form-control" placeholder="Nome que aparece no PIX">
+                  </div>
+                </div>
+
+                <div class="settings-section-label">
+                  <i class="fa-solid fa-share-nodes" style="color: var(--primary);"></i> Redes Sociais
+                  <small>Usadas nas mensagens de WhatsApp para pedir avaliação e seguir.</small>
+                </div>
                 <div class="form-group">
+                  <label class="form-label"><i class="fa-solid fa-star" style="color: var(--warning);"></i> Google Meu Negócio</label>
+                  <input type="url" id="set-review-link" class="form-control" placeholder="https://g.page/r/.../review">
+                </div>
+                <div class="form-row">
+                  <div class="form-group">
+                    <label class="form-label"><i class="fa-brands fa-facebook" style="color: #1877F2;"></i> Facebook</label>
+                    <input type="url" id="set-facebook-link" class="form-control" placeholder="https://facebook.com/seuperfil">
+                  </div>
+                  <div class="form-group">
+                    <label class="form-label"><i class="fa-brands fa-instagram" style="color: #E1306C;"></i> Instagram</label>
+                    <input type="url" id="set-instagram-link" class="form-control" placeholder="https://instagram.com/seuperfil">
+                  </div>
+                </div>
+
+                <div class="settings-section-label">
+                  <i class="fa-solid fa-image" style="color: var(--primary);"></i> Logo
+                  <small>Aparece no topo da nota de serviço enviada ao cliente.</small>
+                </div>
+                <div class="logo-uploader">
+                  <div class="logo-preview" id="set-logo-preview">
+                    <i class="fa-regular fa-image"></i>
+                  </div>
+                  <div class="logo-actions">
+                    <label class="btn btn-outline btn-sm" style="cursor: pointer;">
+                      <i class="fa-solid fa-upload"></i> Trocar logo
+                      <input type="file" id="set-logo-input" accept="image/*" style="display: none;">
+                    </label>
+                    <button type="button" class="btn btn-outline btn-sm" id="btn-remove-logo">
+                      <i class="fa-solid fa-xmark" style="color: var(--danger);"></i> Remover
+                    </button>
+                  </div>
+                </div>
+
+                <div class="form-group" style="margin-top: 18px;">
                   <label class="form-label">Meta de Faturamento Mensal (R$)</label>
                   <input type="number" id="set-monthly-goal" class="form-control" step="100" required>
                 </div>
-                <div class="form-group">
-                  <label class="form-label">Link de avaliação no Google (opcional)</label>
-                  <input type="url" id="set-review-link" class="form-control" placeholder="https://g.page/r/.../review">
-                  <small class="form-hint">Cole aqui o link da sua ficha no Google. Ele é usado no botão &ldquo;Pedir avaliação&rdquo;.</small>
-                </div>
+
                 <button type="submit" class="btn btn-primary">
                   <i class="fa-solid fa-floppy-disk"></i> Salvar Alterações
                 </button>
               </form>
             </div>
 
-            <!-- Backup, Segurança e Restauração -->
+            <!-- Aparência, Backup, Segurança e Restauração -->
             <div>
+              <div class="card" style="margin-bottom: 24px;">
+                <div class="card-header">
+                  <h3 class="card-title"><i class="fa-solid fa-circle-half-stroke"></i> Aparência</h3>
+                </div>
+                <div class="theme-row">
+                  <div class="theme-info">
+                    <div class="theme-icon"><i class="fa-solid fa-sun" id="theme-icon"></i></div>
+                    <div>
+                      <div class="theme-title">Tema do app</div>
+                      <div class="theme-subtitle" id="theme-subtitle">Modo claro ativo</div>
+                    </div>
+                  </div>
+                  <button type="button" class="theme-switch" id="btn-toggle-theme" role="switch" aria-checked="false" aria-label="Alternar tema claro e escuro">
+                    <span class="theme-switch-knob"></span>
+                  </button>
+                </div>
+              </div>
+
               <div class="card" style="margin-bottom: 24px;">
                 <div class="card-header">
                   <h3 class="card-title"><i class="fa-solid fa-cloud-arrow-up"></i> Backup e Segurança</h3>
@@ -709,6 +869,18 @@
           </button>
         </li>
         <li>
+          <button class="bottom-nav-item" data-view-target="view-montadores" data-admin-only="true">
+            <i class="fa-solid fa-helmet-safety"></i>
+            <span>Montadores</span>
+          </button>
+        </li>
+        <li>
+          <button class="bottom-nav-item" data-view-target="view-lojas" data-admin-only="true">
+            <i class="fa-solid fa-store"></i>
+            <span>Lojas</span>
+          </button>
+        </li>
+        <li>
           <button class="bottom-nav-item" data-view-target="view-orcamentos">
             <i class="fa-solid fa-calculator"></i>
             <span>Orçar</span>
@@ -758,6 +930,31 @@
             </div>
           </div>
 
+          <div class="form-group">
+            <label class="form-label">Tipo de Serviço *</label>
+            <input type="text" id="service-type" class="form-control" placeholder="Ex.: Montagem de guarda-roupa" required>
+            <div class="chip-group" id="service-type-chips">
+              <!-- Chips pré-programados injetados em services.js -->
+            </div>
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Montador Responsável</label>
+              <select id="service-assembler" class="form-control">
+                <!-- Populado via JS -->
+              </select>
+              <small class="form-hint">Quem vai executar o serviço.</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Loja Parceira (opcional)</label>
+              <select id="service-store" class="form-control">
+                <!-- Populado via JS -->
+              </select>
+              <small class="form-hint">Se a montagem veio de uma loja, entra na nota dela.</small>
+            </div>
+          </div>
+
           <div class="form-row">
             <div class="form-group">
               <label class="form-label">Data da Montagem *</label>
@@ -776,19 +973,32 @@
 
           <div class="form-row-3">
             <div class="form-group">
-              <label class="form-label">Valor cobrado do cliente (R$) *</label>
+              <label class="form-label">Valor do serviço (R$) *</label>
               <input type="number" id="service-value" class="form-control" step="0.01" min="0" placeholder="0,00" inputmode="decimal" required>
-              <small class="form-hint">Total que o cliente paga.</small>
+              <small class="form-hint">Mão de obra da montagem.</small>
             </div>
+            <div class="form-group">
+              <label class="form-label">Deslocamento (R$)</label>
+              <input type="number" id="service-travel" class="form-control" step="0.01" min="0" placeholder="0,00" inputmode="decimal" value="0">
+              <small class="form-hint">Cobrado do cliente junto com o serviço.</small>
+            </div>
+            <div class="form-group">
+              <label class="form-label">Total (cliente paga)</label>
+              <div class="profit-preview is-total" id="service-total-preview">R$ 0,00</div>
+              <small class="form-hint">Serviço + deslocamento.</small>
+            </div>
+          </div>
+
+          <div class="form-row">
             <div class="form-group">
               <label class="form-label">Gastos com material (R$)</label>
               <input type="number" id="service-cost" class="form-control" step="0.01" min="0" placeholder="0,00" inputmode="decimal" value="0">
-              <small class="form-hint">Corrediça, dobradiça, parafuso&hellip;</small>
+              <small class="form-hint">Corrediça, dobradiça, parafuso&hellip; sai do seu lucro.</small>
             </div>
             <div class="form-group">
               <label class="form-label">Lucro líquido</label>
               <div class="profit-preview" id="service-profit-preview">R$ 0,00</div>
-              <small class="form-hint">Valor &minus; gastos. Calculado automaticamente.</small>
+              <small class="form-hint">Total &minus; gastos. Calculado automaticamente.</small>
             </div>
           </div>
 
@@ -817,6 +1027,7 @@
             <select id="service-status" class="form-control">
               <option value="agendado">Agendado (Vermelho na Agenda)</option>
               <option value="concluido">Concluído (Verde na Agenda)</option>
+              <option value="cancelado">Cancelado (Cinza na Agenda)</option>
             </select>
           </div>
 
@@ -996,12 +1207,92 @@
   </div>
 
   <!-- ===============================================================
+       MODAL: LOJA PARCEIRA
+       =============================================================== -->
+  <div class="modal-overlay" id="store-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="store-modal-title"><i class="fa-solid fa-store"></i> Nova Loja Parceira</h3>
+        <button class="modal-close-btn" data-modal-close><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="store-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nome da Loja *</label>
+            <input type="text" id="store-name" class="form-control" placeholder="Ex: Loja TokLar Móveis" required>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">Pessoa de Contato</label>
+              <input type="text" id="store-contact" class="form-control" placeholder="Ex: Setor de Entregas">
+            </div>
+            <div class="form-group">
+              <label class="form-label">WhatsApp da Loja</label>
+              <input type="text" id="store-phone" class="form-control" placeholder="(11) 99999-9999">
+            </div>
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label class="form-label">CNPJ</label>
+              <input type="text" id="store-cnpj" class="form-control" placeholder="00.000.000/0000-00">
+            </div>
+            <div class="form-group">
+              <label class="form-label">Endereço</label>
+              <input type="text" id="store-address" class="form-control" placeholder="Rua, número, bairro, cidade">
+            </div>
+          </div>
+          <div class="form-group">
+            <label class="form-label">Observações</label>
+            <input type="text" id="store-notes" class="form-control" placeholder="Ex: fecha nota todo dia 30">
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Salvar Loja</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===============================================================
+       MODAL: MONTADOR DA EQUIPE
+       =============================================================== -->
+  <div class="modal-overlay" id="assembler-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 class="modal-title" id="assembler-modal-title"><i class="fa-solid fa-helmet-safety"></i> Novo Montador</h3>
+        <button class="modal-close-btn" data-modal-close><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="assembler-form">
+        <div class="modal-body">
+          <div class="form-group">
+            <label class="form-label">Nome do Montador *</label>
+            <input type="text" id="assembler-name" class="form-control" placeholder="Ex: Lucas Gabriel" required>
+          </div>
+          <div class="form-group">
+            <label class="form-label">WhatsApp</label>
+            <input type="text" id="assembler-phone" class="form-control" placeholder="(11) 99999-9999">
+          </div>
+          <label class="checkbox-row">
+            <input type="checkbox" id="assembler-is-owner">
+            <span>Sou eu (dono da empresa que também executa montagens)</span>
+          </label>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
+          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Salvar Montador</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- ===============================================================
        MODAL 5: RECIBO PROFISSIONAL (IMPRIMÍVEL / PDF)
        =============================================================== -->
   <div class="modal-overlay" id="receipt-modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h3 class="modal-title"><i class="fa-solid fa-receipt"></i> Recibo de Pagamento</h3>
+        <h3 class="modal-title"><i class="fa-solid fa-receipt"></i> Nota de Serviço</h3>
         <button class="modal-close-btn" data-modal-close><i class="fa-solid fa-xmark"></i></button>
       </div>
       <div class="modal-body" id="receipt-modal-body">
@@ -1010,7 +1301,10 @@
       <div class="modal-footer">
         <button type="button" class="btn btn-outline" data-modal-close>Fechar</button>
         <button type="button" class="btn btn-primary" onclick="window.print()">
-          <i class="fa-solid fa-print"></i> Imprimir / Salvar PDF
+          <i class="fa-solid fa-print"></i> Gerar PDF
+        </button>
+        <button type="button" class="btn btn-whatsapp" id="btn-send-receipt-whatsapp">
+          <i class="fa-brands fa-whatsapp"></i> Enviar nota ao cliente
         </button>
       </div>
     </div>
@@ -1131,6 +1425,8 @@
   <script src="js/services.js"></script>
   <script src="js/finance.js"></script>
   <script src="js/customers.js"></script>
+  <script src="js/stores.js"></script>
+  <script src="js/assemblers.js"></script>
   <script src="js/quotes.js"></script>
   <script src="js/app.js"></script>
 </body>

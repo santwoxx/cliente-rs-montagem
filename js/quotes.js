@@ -8,6 +8,7 @@ class QuotesController {
     this.selectedItems = {}; // { id: quantity }
     this.materialCost = 0; // gasto com material: sai do lucro, nao do bolso do cliente
     this.discount = 0;
+    this.currentReceiptContext = null; // { type: 'service' | 'store', id }
   }
 
   init() {
@@ -54,6 +55,12 @@ class QuotesController {
       scheduleBtn.addEventListener('click', () => {
         this.convertQuoteToService();
       });
+    }
+
+    // Envio da nota aberta direto para o cliente / loja
+    const sendReceiptBtn = document.getElementById('btn-send-receipt-whatsapp');
+    if (sendReceiptBtn) {
+      sendReceiptBtn.addEventListener('click', () => this.sendCurrentReceipt());
     }
   }
 
@@ -188,6 +195,8 @@ class QuotesController {
     msg += `💳 *Formas de Pagamento:* PIX, Dinheiro, Cartão\n`;
     if (settings.pixKey) {
       msg += `🔑 *Chave PIX:* ${settings.pixKey} (${settings.pixType || 'Chave'})\n`;
+      if (settings.bankName) msg += `🏦 *Banco:* ${settings.bankName}\n`;
+      if (settings.pixHolder) msg += `👤 *Titular:* ${settings.pixHolder}\n`;
     }
     msg += `------------------------------------\n`;
     msg += `⭐ _Montador profissional com ferramentas especializadas e garantia de serviço!_\n`;
@@ -237,8 +246,10 @@ class QuotesController {
     if (clientPhone) document.getElementById('service-phone').value = clientPhone;
     if (clientAddress) document.getElementById('service-address').value = clientAddress;
     document.getElementById('service-description').value = description;
+    document.getElementById('service-type').value = 'Montagem';
     document.getElementById('service-value').value = summary.total;
     document.getElementById('service-cost').value = summary.materialCost;
+    window.servicesController.highlightTypeChip('Montagem');
     window.servicesController.updateProfitPreview();
   }
 
@@ -251,43 +262,106 @@ class QuotesController {
     const modalBody = document.getElementById('receipt-modal-body');
     if (!modalBody) return;
 
+    // O botão "Enviar nota" do rodapé precisa saber de quem é esta nota.
+    this.currentReceiptContext = { type: 'service', id: serviceId };
+
     const esc = (v) => Utils.escapeHtml(v);
+    const travelFee = Utils.toNumber(service.travelFee);
+    const total = Utils.serviceTotal(service);
 
     modalBody.innerHTML = `
-      <div class="printable-receipt" style="padding: 24px; border: 2px solid var(--border-color); border-radius: var(--radius-md); background: #fff;">
-        <div class="receipt-header" style="text-align: center; border-bottom: 2px dashed #CBD5E1; padding-bottom: 16px; margin-bottom: 20px;">
-          <h2 style="font-size: 1.5rem; font-weight: 800; color: var(--primary);">${esc(settings.companyName || 'RS Montagens')}</h2>
-          <p style="font-size: 0.9rem; color: var(--text-muted);">${esc(settings.montadorName || 'Montador de Móveis Profissional')}</p>
-          <p style="font-size: 0.85rem; color: var(--text-muted);">WhatsApp: ${esc(settings.phone || '')}</p>
-          <div style="margin-top: 8px; font-weight: 800; font-size: 1.1rem; text-transform: uppercase; letter-spacing: 0.05em;">
-            RECIBO DE PRESTAÇÃO DE SERVIÇOS
-          </div>
+      <div class="printable-receipt">
+        <div class="receipt-header">
+          ${settings.logo ? `<img src="${esc(settings.logo)}" alt="Logo" class="receipt-logo">` : ''}
+          <h2>${esc(settings.companyName || 'RS Montagens')}</h2>
+          <p>${esc(settings.profession || 'Montador de Móveis')}</p>
+          ${settings.cnpj ? `<p>CNPJ/MEI: ${esc(settings.cnpj)}</p>` : ''}
+          ${settings.phone ? `<p>WhatsApp: ${esc(settings.phone)}</p>` : ''}
+          ${settings.address ? `<p>${esc(settings.address)}${settings.city ? ' &mdash; ' + esc(settings.city) : ''}</p>` : ''}
+          <div class="receipt-doc-title">NOTA DE PRESTAÇÃO DE SERVIÇOS</div>
         </div>
 
-        <div style="margin-bottom: 20px; line-height: 1.8;">
-          <p>Recebi de <strong>${esc(service.clientName)}</strong> a quantia de <strong style="font-size: 1.15rem; color: var(--success-dark);">${Utils.formatBRL(service.value)}</strong> referente aos serviços de montagem e regulagem descritos abaixo:</p>
-        </div>
-
-        <div style="background: #F8FAFC; border: 1px solid var(--border-color); padding: 14px; border-radius: var(--radius-sm); margin-bottom: 20px;">
-          <p><strong>Descrição do Serviço:</strong> ${esc(service.description)}</p>
-          <p><strong>Data de Execução:</strong> ${Utils.formatDateBR(service.date)}</p>
+        <div class="receipt-block">
+          <p><strong>Cliente:</strong> ${esc(service.clientName)}</p>
+          ${service.clientPhone ? `<p><strong>Telefone:</strong> ${esc(service.clientPhone)}</p>` : ''}
           <p><strong>Endereço:</strong> ${esc(service.clientAddress || 'Local do cliente')}</p>
-          <p><strong>Forma de Pagamento:</strong> ${esc(service.paymentMethod)} (${service.paymentStatus === 'pago' ? 'Quitado' : 'Pendente'})</p>
-          ${settings.pixKey ? `<p><strong>Chave PIX:</strong> ${esc(settings.pixKey)}</p>` : ''}
+          <p><strong>Data de execução:</strong> ${Utils.formatDateBR(service.date)} às ${esc(service.time)}</p>
+          ${service.assemblerName ? `<p><strong>Montador responsável:</strong> ${esc(service.assemblerName)}</p>` : ''}
         </div>
 
-        <div style="margin-top: 40px; display: flex; justify-content: space-between;">
-          <div style="width: 45%; border-top: 1px solid #94A3B8; text-align: center; padding-top: 8px; font-size: 0.85rem;">
-            ${esc(service.clientName)}<br><span style="color: #64748B;">Cliente</span>
+        <table class="receipt-table">
+          <thead>
+            <tr>
+              <th>Descrição</th>
+              <th style="text-align: right;">Valor</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>${esc(service.serviceType || 'Montagem')} &mdash; ${esc(service.description)}</td>
+              <td style="text-align: right;">${Utils.formatBRL(service.value)}</td>
+            </tr>
+            ${travelFee > 0 ? `
+              <tr>
+                <td>Deslocamento</td>
+                <td style="text-align: right;">${Utils.formatBRL(travelFee)}</td>
+              </tr>` : ''}
+          </tbody>
+          <tfoot>
+            <tr>
+              <td style="text-align: right;"><strong>TOTAL</strong></td>
+              <td style="text-align: right;"><strong>${Utils.formatBRL(total)}</strong></td>
+            </tr>
+          </tfoot>
+        </table>
+
+        ${service.notes ? `
+          <div class="receipt-block">
+            <p><strong>Observações:</strong> ${esc(service.notes)}</p>
+          </div>` : ''}
+
+        <div class="receipt-block">
+          <p><strong>Forma de pagamento:</strong> ${esc(service.paymentMethod || 'PIX')} (${service.paymentStatus === 'pago' ? 'Quitado' : 'Pendente'})</p>
+        </div>
+
+        ${settings.pixKey ? `
+          <div class="receipt-block receipt-pix">
+            <p><strong>Dados para pagamento via PIX</strong></p>
+            <p>Chave (${esc(settings.pixType || 'Chave')}): ${esc(settings.pixKey)}</p>
+            ${settings.bankName ? `<p>Banco: ${esc(settings.bankName)}</p>` : ''}
+            ${settings.pixHolder ? `<p>Titular: ${esc(settings.pixHolder)}</p>` : ''}
+          </div>` : ''}
+
+        <div class="receipt-signatures">
+          <div>
+            ${esc(service.clientName)}<br><span>Cliente</span>
           </div>
-          <div style="width: 45%; border-top: 1px solid #94A3B8; text-align: center; padding-top: 8px; font-size: 0.85rem;">
-            ${esc(settings.montadorName || 'Montador Responsável')}<br><span style="color: #64748B;">RS Montagens</span>
+          <div>
+            ${esc(settings.montadorName || 'Montador Responsável')}<br><span>${esc(settings.companyName || 'RS Montagens')}</span>
           </div>
         </div>
       </div>
     `;
 
     window.app.openModal('receipt-modal');
+  }
+
+  /**
+   * Botão "Enviar nota" do rodapé do modal: manda a nota aberta
+   * direto para o cliente ou para a loja, conforme o contexto.
+   */
+  sendCurrentReceipt() {
+    const ctx = this.currentReceiptContext;
+    if (!ctx) {
+      window.app.showToast('Abra uma nota antes de enviar.', 'warning');
+      return;
+    }
+
+    if (ctx.type === 'store') {
+      window.storesController.sendInvoiceToStore(ctx.id);
+    } else {
+      window.servicesController.sendReceiptToClient(ctx.id);
+    }
   }
 }
 

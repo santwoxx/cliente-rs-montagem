@@ -12,13 +12,26 @@ Sistema web responsivo para gestão operacional e financeira de montadores de m�
 - **Agenda Inteligente**:
   - Calendário mensal interativo com status por cores (Verde: Concluído, Vermelho: Agendado, Bicolor: Ambos).
   - Ações rápidas de WhatsApp, rota no Google Maps/Waze e conclusão do serviço em 1 clique.
+  - Tipos de serviço pré-programados (Montagem, Instalação, Reparo, Manutenção, Consulta, Atendimento, Visita técnica, Diária) em chips, com campo livre para o detalhe.
+  - Campos de **Deslocamento** e **Montador Responsável** por agendamento, além do status Cancelado.
+- **Painel dos Montadores**:
+  - Cadastro da equipe de montadores (incluindo o próprio dono, que também executa serviços).
+  - Escolha um montador e veja total produzido, lucro líquido, concluídas, agendadas e a lista completa das montagens dele, com filtro por mês/ano/tudo.
+- **Lojas Parceiras**:
+  - Cadastro das lojas que repassam montagens, com contato, CNPJ e endereço.
+  - Montagens agrupadas por loja, com total do período, já recebido e a receber.
+  - **Nota única** somando todos os serviços da loja no período — pronta para PDF ou envio direto no WhatsApp da loja.
+- **Nota de Serviço enviada direto ao cliente**:
+  - Documento com logo, dados do prestador, itens, observações e dados do PIX (chave, banco e titular).
+  - Botão que abre a conversa do cliente no WhatsApp já com a nota escrita — sem passo manual.
+- **Tema claro e escuro**, com preferência salva no aparelho.
 - **Controle Financeiro Completo**:
   - Saldo líquido em tempo real, receitas, despesas e valor a receber.
   - Gráficos visuais (Chart.js): Entradas vs Saídas e Despesas por Categoria.
   - Livro caixa com filtros por período e tipo.
 - **Gestão de Clientes**:
   - Cadastro completo com busca automática de endereço por CEP (ViaCEP).
-  - Histórico de serviços e total investido por cliente.
+  - Ficha com histórico completo de serviços (antigos e novos) e total investido por cliente.
 - **Calculadora de Montagem & Orçamentos**:
   - Tabela rápida por tipo de móvel (guarda-roupa, painel TV, rack, cozinha, etc.).
   - Geração de mensagem formatada com emojis e Chave PIX para WhatsApp.
@@ -27,6 +40,10 @@ Sistema web responsivo para gestão operacional e financeira de montadores de m�
   - Layout pronto para impressão ou exportação em PDF.
 - **Sincronização em Nuvem**:
   - Persistência e sincronização de dados via Firebase Cloud Firestore.
+
+> As telas **Montadores** e **Lojas** são exclusivas do administrador, assim como a Gestão da Equipe.
+> O histórico de pedidos do cliente que originou estas funcionalidades está em
+> [TRANSCRICAO-VIDEOS.md](TRANSCRICAO-VIDEOS.md).
 
 ---
 

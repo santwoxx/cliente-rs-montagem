@@ -197,14 +197,22 @@ class CalendarController {
     const esc = (v) => Utils.escapeHtml(v);
     const idArg = Utils.escapeJsString(service.id);
     const cost = Utils.toNumber(service.cost);
+    const total = Utils.serviceTotal(service);
     const profit = Utils.serviceProfit(service);
 
     const isConcluido = service.status === 'concluido';
+    const isCancelado = service.status === 'cancelado';
+    const statusLabel = isConcluido ? 'Concluído' : (isCancelado ? 'Cancelado' : 'Agendado');
+    const statusClass = isConcluido ? 'badge-concluido' : (isCancelado ? 'badge-cancelado' : 'badge-agendado');
     const isPago = service.paymentStatus === 'pago';
 
     const cleanPhone = (service.clientPhone || '').replace(/\D/g, '');
+    const empresa = window.storageManager.getSettings().companyName || 'RS Montagens';
     const whatsMsg = encodeURIComponent(
-      `Olá ${service.clientName}, tudo bem? Sou o montador de móveis da RS Montagens.\nEstou confirmando o serviço: "${service.description}" agendado para ${this.formatDateBR(service.date)} às ${service.time}h.`
+      `Olá ${service.clientName}! Este é a ${empresa} confirmando seu agendamento.\n\n`
+      + `Serviço: ${service.serviceType || 'Montagem'}\n`
+      + `Data: ${this.formatDateBR(service.date)} às ${service.time}\n\n`
+      + `Qualquer dúvida, estou à disposição. Até logo!`
     );
     const whatsUrl = `https://wa.me/55${cleanPhone}?text=${whatsMsg}`;
 
@@ -219,20 +227,24 @@ class CalendarController {
         </div>
         <div class="service-info">
           <h4>${esc(service.clientName)}</h4>
-          <p class="service-desc">${esc(service.description)}</p>
+          <p class="service-desc">
+            <span class="type-tag">${esc(service.serviceType || 'Montagem')}</span>
+            ${esc(service.description)}
+          </p>
           <div class="service-meta">
             <span><i class="fa-regular fa-clock"></i> ${esc(service.time)}h</span>
+            ${service.assemblerName ? `<span><i class="fa-solid fa-helmet-safety"></i> ${esc(service.assemblerName)}</span>` : ''}
             ${service.clientAddress ? `<a class="service-address-link" href="${mapsUrl}" target="_blank" rel="noopener" title="Abrir no Google Maps"><i class="fa-solid fa-location-dot"></i> ${esc(service.clientAddress)}</a>` : ''}
           </div>
         </div>
       </div>
       <div class="service-item-right">
         <div class="service-price">
-          <div class="service-price-val">${Utils.formatBRL(service.value)}</div>
-          ${cost > 0 ? `<div class="service-price-net" title="Valor cobrado menos os gastos com material">líquido ${Utils.formatBRL(profit)}</div>` : ''}
+          <div class="service-price-val">${Utils.formatBRL(total)}</div>
+          ${cost > 0 ? `<div class="service-price-net" title="Total cobrado menos os gastos com material">líquido ${Utils.formatBRL(profit)}</div>` : ''}
           <div style="display: flex; gap: 4px; justify-content: flex-end; margin-top: 4px;">
-            <span class="badge ${isConcluido ? 'badge-concluido' : 'badge-agendado'}">
-              ${isConcluido ? 'Concluído' : 'Agendado'}
+            <span class="badge ${statusClass}">
+              ${statusLabel}
             </span>
             <span class="badge ${isPago ? 'badge-pago' : 'badge-pendente'}">
               ${isPago ? 'Pago' : 'Pendente'}
@@ -250,11 +262,12 @@ class CalendarController {
               <i class="fa-solid fa-map-location-dot"></i>
             </a>
           ` : ''}
-          <button class="btn ${isConcluido ? 'btn-outline' : 'btn-success'} btn-icon" 
-                  title="${isConcluido ? 'Reabrir Serviço' : 'Marcar como Concluído'}"
-                  onclick="window.servicesController.toggleServiceStatus('${idArg}')">
-            <i class="fa-solid ${isConcluido ? 'fa-arrow-rotate-left' : 'fa-check'}"></i>
-          </button>
+          ${isCancelado ? '' : `
+            <button class="btn ${isConcluido ? 'btn-outline' : 'btn-success'} btn-icon"
+                    title="${isConcluido ? 'Reabrir Serviço' : 'Marcar como Concluído'}"
+                    onclick="window.servicesController.toggleServiceStatus('${idArg}')">
+              <i class="fa-solid ${isConcluido ? 'fa-arrow-rotate-left' : 'fa-check'}"></i>
+            </button>`}
           <button class="btn btn-outline btn-icon" title="Mais Opções" onclick="window.servicesController.openServiceDetailModal('${idArg}')">
             <i class="fa-solid fa-ellipsis-vertical"></i>
           </button>

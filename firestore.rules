@@ -29,21 +29,19 @@ service cloud.firestore {
       allow create, update, delete: if isAdmin();
     }
 
-    // 2. Dados do Aplicativo (Serviços, Clientes, Financeiro, Configurações):
+    // 2. Dados do Aplicativo (Serviços, Clientes, Financeiro, Configurações,
+    //    Lojas Parceiras e Montadores da equipe):
     match /app_data/{docId} {
       // Leitura permitida para qualquer usuário autenticado (Admins e Funcionários)
       allow read: if isAuthenticated();
 
-      // Configurações gerais da empresa e transações financeiras:
-      // Exclusivo para Administradores
-      allow write: if (docId == 'settings' || docId == 'transactions')
-        ? isAdmin()
-        : isAuthenticated();
-
-      // Serviços/Montagens e Clientes:
-      // Permitido para Admins e Funcionários operacionais
+      // Escrita operacional (Admins e Funcionários): serviços e clientes.
+      // Todo o resto — configurações da empresa, financeiro, cadastro de lojas
+      // parceiras e cadastro de montadores — é exclusivo do Administrador.
+      // Uma única regra evita que um `allow` mais permissivo anule o outro.
       allow write: if (docId == 'services' || docId == 'customers')
-        && isAuthenticated();
+        ? isAuthenticated()
+        : isAdmin();
     }
 
     // 3. Regra de Segurança Geral:

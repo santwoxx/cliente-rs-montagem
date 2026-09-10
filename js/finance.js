@@ -219,12 +219,13 @@ class FinanceController {
     // Also include pending services from agenda
     const services = window.storageManager.getServices();
     services.forEach(s => {
+      if (s.status === 'cancelado') return;
       if (s.status === 'agendado' || s.paymentStatus === 'pendente') {
         // if date is in current period
         if (this.currentPeriodFilter === 'month' && (s.date || '').startsWith(Utils.currentMonthPrefix())) {
-          totalPendente += Utils.toNumber(s.value);
+          totalPendente += Utils.serviceTotal(s);
         } else if (this.currentPeriodFilter === 'all') {
-          totalPendente += Utils.toNumber(s.value);
+          totalPendente += Utils.serviceTotal(s);
         }
       }
     });
@@ -317,6 +318,12 @@ class FinanceController {
   renderCharts(transactions) {
     if (typeof Chart === 'undefined') return;
 
+    // Os gráficos seguem o tema ativo, senão o texto some no modo escuro.
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const textColor = isDark ? '#94A3B8' : '#64748B';
+    const gridColor = isDark ? 'rgba(148, 163, 184, 0.15)' : 'rgba(100, 116, 139, 0.12)';
+    Chart.defaults.color = textColor;
+
     // 1. Cashflow Bar Chart
     const ctxCashflow = document.getElementById('chart-cashflow');
     if (ctxCashflow) {
@@ -378,9 +385,15 @@ class FinanceController {
             }
           },
           scales: {
+            x: {
+              grid: { color: gridColor },
+              ticks: { color: textColor }
+            },
             y: {
               beginAtZero: true,
+              grid: { color: gridColor },
               ticks: {
+                color: textColor,
                 callback: (v) => `R$ ${v}`
               }
             }
@@ -420,6 +433,7 @@ class FinanceController {
             backgroundColor: [
               '#FF5E1E', '#3B82F6', '#10B981', '#F59E0B', '#8B5CF6', '#EC4899', '#64748B'
             ],
+            borderColor: isDark ? '#131C2E' : '#FFFFFF',
             borderWidth: 2
           }]
         },
@@ -427,7 +441,7 @@ class FinanceController {
           responsive: true,
           maintainAspectRatio: false,
           plugins: {
-            legend: { position: 'bottom' }
+            legend: { position: 'bottom', labels: { color: textColor } }
           }
         }
       });

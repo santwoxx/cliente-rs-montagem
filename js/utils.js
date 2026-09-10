@@ -94,10 +94,23 @@ const Utils = {
   },
 
   /* ---------- Financeiro do serviço ---------- */
-  // Regra do vídeo: o cliente paga o VALOR; o material sai do bolso do montador.
-  // Lucro líquido = valor cobrado - gastos com material.
+  // Regra do vídeo: o cliente paga o VALOR + o DESLOCAMENTO;
+  // o material sai do bolso do montador.
+  // Total (cliente paga) = valor do serviço + deslocamento.
+  serviceTotal(service) {
+    return this.toNumber(service && service.value) + this.toNumber(service && service.travelFee);
+  },
+
+  // Lucro líquido = total cobrado - gastos com material.
   serviceProfit(service) {
-    return this.toNumber(service && service.value) - this.toNumber(service && service.cost);
+    return this.serviceTotal(service) - this.toNumber(service && service.cost);
+  },
+
+  /* ---------- Texto ---------- */
+  // Primeira letra maiúscula para as iniciais dos avatares.
+  initialOf(name, fallback = 'C') {
+    const clean = String(name || '').trim();
+    return (clean.charAt(0) || fallback).toUpperCase();
   }
 };
 

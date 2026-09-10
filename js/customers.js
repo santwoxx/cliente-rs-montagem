@@ -187,7 +187,7 @@ class CustomersController {
 
     const totalRecebido = services
       .filter(s => s.paymentStatus === 'pago')
-      .reduce((sum, s) => sum + Utils.toNumber(s.value), 0);
+      .reduce((sum, s) => sum + Utils.serviceTotal(s), 0);
     const totalLucro = services
       .filter(s => s.paymentStatus === 'pago')
       .reduce((sum, s) => sum + Utils.serviceProfit(s), 0);
@@ -242,17 +242,19 @@ class CustomersController {
           </div>
         ` : services.map(s => {
           const sCost = Utils.toNumber(s.cost);
+          const label = s.status === 'concluido' ? 'Concluído'
+            : (s.status === 'cancelado' ? 'Cancelado' : 'Agendado');
+          const badgeClass = s.status === 'concluido' ? 'badge-concluido'
+            : (s.status === 'cancelado' ? 'badge-cancelado' : 'badge-agendado');
           return `
           <button class="history-item" onclick="window.customersController.openServiceFromHistory('${Utils.escapeJsString(s.id)}')">
             <div class="history-main">
-              <h5>${esc(s.description)}</h5>
+              <h5><span class="type-tag">${esc(s.serviceType || 'Montagem')}</span> ${esc(s.description)}</h5>
               <span class="history-date">${Utils.formatDateBR(s.date)} às ${esc(s.time)}h</span>
-              <span class="badge ${s.status === 'concluido' ? 'badge-concluido' : 'badge-agendado'}">
-                ${s.status === 'concluido' ? 'Concluído' : 'Agendado'}
-              </span>
+              <span class="badge ${badgeClass}">${label}</span>
             </div>
             <div class="history-money">
-              <strong>${Utils.formatBRL(s.value)}</strong>
+              <strong>${Utils.formatBRL(Utils.serviceTotal(s))}</strong>
               ${sCost > 0 ? `<span class="history-net">líquido ${Utils.formatBRL(Utils.serviceProfit(s))}</span>` : ''}
             </div>
           </button>`;
@@ -330,7 +332,7 @@ class CustomersController {
       const clientServices = services.filter(s => s.clientId === c.id || s.clientName === c.name);
       const totalSpent = clientServices
         .filter(s => s.paymentStatus === 'pago')
-        .reduce((sum, s) => sum + Utils.toNumber(s.value), 0);
+        .reduce((sum, s) => sum + Utils.serviceTotal(s), 0);
 
       const esc = (v) => Utils.escapeHtml(v);
       const idArg = Utils.escapeJsString(c.id);
