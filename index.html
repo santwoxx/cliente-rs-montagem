@@ -215,7 +215,7 @@
             <!-- Today's Schedule -->
             <div class="card">
               <div class="card-header">
-                <h3 class="card-title"><i class="fa-regular fa-calendar-check"></i> Montagens de Hoje (09/09)</h3>
+                <h3 class="card-title" id="dash-today-title"><i class="fa-regular fa-calendar-check"></i> Montagens de Hoje</h3>
                 <button class="btn btn-outline btn-sm" data-view-target="view-agenda">Ver Agenda Completa</button>
               </div>
               <div id="dash-today-services">
@@ -608,7 +608,12 @@
               <!-- Customer Info for Quote -->
               <div class="form-row" style="margin-bottom: 16px;">
                 <div class="form-group" style="margin-bottom: 0;">
-                  <label class="form-label">Nome do Cliente</label>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                    <label class="form-label" style="margin-bottom: 0;">Nome do Cliente</label>
+                    <button type="button" class="btn btn-outline btn-sm btn-import-agenda" onclick="Utils.importContact('calc-client-name', 'calc-client-phone')" title="Importar dados da agenda do celular" style="padding: 2px 8px; font-size: 0.75rem; border-color: var(--primary); color: var(--primary);">
+                      <i class="fa-solid fa-address-book"></i> Importar da Agenda
+                    </button>
+                  </div>
                   <input type="text" id="calc-client-name" class="form-control" placeholder="Ex: Patrícia Lima">
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
@@ -1111,7 +1116,12 @@
           </div>
 
           <div class="form-group">
-            <label class="form-label">Nome do Cliente *</label>
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+              <label class="form-label" style="margin-bottom: 0;">Nome do Cliente *</label>
+              <button type="button" class="btn btn-outline btn-sm btn-import-agenda" onclick="Utils.importContact('service-client-name', 'service-phone')" title="Importar dados da agenda do celular" style="padding: 2px 8px; font-size: 0.75rem; border-color: var(--primary); color: var(--primary);">
+                <i class="fa-solid fa-address-book"></i> Importar da Agenda
+              </button>
+            </div>
             <input type="text" id="service-client-name" class="form-control" placeholder="Ex: Eder Oliveira" required>
           </div>
 
@@ -1406,7 +1416,12 @@
         <div class="modal-body">
           <div class="form-row">
             <div class="form-group">
-              <label class="form-label">Nome Completo *</label>
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                <label class="form-label" style="margin-bottom: 0;">Nome Completo *</label>
+                <button type="button" class="btn btn-outline btn-sm btn-import-agenda" onclick="Utils.importContact('cust-name', 'cust-phone')" title="Importar dados da agenda do celular" style="padding: 2px 8px; font-size: 0.75rem; border-color: var(--primary); color: var(--primary);">
+                  <i class="fa-solid fa-address-book"></i> Importar da Agenda
+                </button>
+              </div>
               <input type="text" id="cust-name" class="form-control" placeholder="Ex: Patrícia Souza" required>
             </div>
             <div class="form-group">

@@ -282,6 +282,12 @@ class App {
     const ehAdmin = !auth || auth.podeVerValoresCheios();
 
     // Render Today list on Dashboard
+    const dashTodayTitle = document.getElementById('dash-today-title');
+    if (dashTodayTitle) {
+      const [ty, tm, td] = todayStr.split('-');
+      dashTodayTitle.innerHTML = `<i class="fa-regular fa-calendar-check"></i> Montagens de Hoje (${td}/${tm})`;
+    }
+
     const todayServices = services.filter(s => s.date === todayStr && s.status !== 'cancelado');
     const todayContainer = document.getElementById('dash-today-services');
     if (todayContainer) {

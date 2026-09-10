@@ -165,7 +165,68 @@ const Utils = {
   initialOf(name, fallback = 'C') {
     const clean = String(name || '').trim();
     return (clean.charAt(0) || fallback).toUpperCase();
+  },
+
+  /* ---------- Agenda / Contatos do Celular (Contact Picker API) ---------- */
+  formatContactPhone(rawPhone) {
+    if (!rawPhone) return '';
+    let digits = String(rawPhone).replace(/\D/g, '');
+    // Se começa com 55 e tem 12 ou 13 dígitos (DDI Brasil), remove o 55
+    if (digits.startsWith('55') && (digits.length === 12 || digits.length === 13)) {
+      digits = digits.slice(2);
+    }
+    if (digits.length === 11) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+    } else if (digits.length === 10) {
+      return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    }
+    return rawPhone;
+  },
+
+  async importContact(nameInputId, phoneInputId) {
+    if (!('contacts' in navigator && 'ContactsManager' in window)) {
+      if (window.app && window.app.showToast) {
+        window.app.showToast('A importação da agenda nativa funciona no Chrome para Android. Digite os dados manualmente.', 'warning');
+      } else {
+        alert('A importação da agenda nativa funciona no Chrome para Android.');
+      }
+      return;
+    }
+
+    try {
+      const props = ['name', 'tel'];
+      const opts = { multiple: false };
+      const contacts = await navigator.contacts.select(props, opts);
+
+      if (contacts && contacts.length > 0) {
+        const contact = contacts[0];
+        const nameInput = typeof nameInputId === 'string' ? document.getElementById(nameInputId) : nameInputId;
+        const phoneInput = typeof phoneInputId === 'string' ? document.getElementById(phoneInputId) : phoneInputId;
+
+        if (contact.name && contact.name.length > 0 && nameInput) {
+          nameInput.value = contact.name[0];
+          nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+          nameInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        if (contact.tel && contact.tel.length > 0 && phoneInput) {
+          const rawPhone = contact.tel[0];
+          phoneInput.value = this.formatContactPhone(rawPhone);
+          phoneInput.dispatchEvent(new Event('input', { bubbles: true }));
+          phoneInput.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+
+        if (window.app && window.app.showToast) {
+          window.app.showToast('Contato importado com sucesso!', 'success');
+        }
+      }
+    } catch (err) {
+      if (err.name !== 'InvalidStateError' && !String(err).includes('canceled') && !String(err).includes('cancelled')) {
+        console.error('Erro ao importar contato:', err);
+      }
+    }
   }
 };
 
 window.Utils = Utils;
+
