@@ -617,7 +617,7 @@
 /* --------------------------------------------------------------------------
    Barra inferior do celular: agora com 8 destinos, o texto precisa caber
    -------------------------------------------------------------------------- */
-@media (max-width: 768px) {
+@media (max-width: 1024px), (orientation: portrait), (hover: none) and (pointer: coarse) {
   .mobile-bottom-nav {
     padding: 0 2px;
   }
@@ -645,10 +645,36 @@
   }
 }
 
+html.mobile-mode .mobile-bottom-nav {
+  padding: 0 2px;
+}
+
+html.mobile-mode .bottom-nav-list {
+  justify-content: space-between;
+}
+
+html.mobile-mode .bottom-nav-item {
+  gap: 3px;
+  padding: 6px 1px;
+  font-size: 0.6rem;
+  min-width: 0;
+}
+
+html.mobile-mode .bottom-nav-item i {
+  font-size: 1.12rem;
+}
+
+html.mobile-mode .bottom-nav-item span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 /* --------------------------------------------------------------------------
    Responsivo
    -------------------------------------------------------------------------- */
-@media (max-width: 768px) {
+@media (max-width: 1024px), (orientation: portrait), (hover: none) and (pointer: coarse) {
   .assembler-picker {
     grid-template-columns: 1fr;
   }
@@ -670,4 +696,26 @@
   .receipt-signatures > div {
     width: 100%;
   }
+}
+
+html.mobile-mode .assembler-picker {
+  grid-template-columns: 1fr;
+}
+
+html.mobile-mode .theme-row {
+  gap: 12px;
+}
+
+html.mobile-mode .store-card-footer {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+html.mobile-mode .receipt-signatures {
+  flex-direction: column;
+  gap: 32px;
+}
+
+html.mobile-mode .receipt-signatures > div {
+  width: 100%;
 }
