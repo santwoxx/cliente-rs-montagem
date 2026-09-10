@@ -1,8 +1,8 @@
 {
   "id": "/",
-  "name": "RS Montagens | Sistema do Montador",
-  "short_name": "RS Montagens",
-  "description": "Agenda, clientes, orçamentos e controle financeiro para montadores de móveis.",
+  "name": "RS Móveis | Marcenaria de Alto Padrão",
+  "short_name": "RS Móveis",
+  "description": "Agenda, clientes, orçamentos e controle financeiro para montadores e marcenaria de alto padrão.",
   "lang": "pt-BR",
   "dir": "ltr",
   "start_url": "/?fonte=pwa",
@@ -10,8 +10,8 @@
   "display": "standalone",
   "display_override": ["standalone", "minimal-ui"],
   "orientation": "portrait",
-  "background_color": "#F8FAFC",
-  "theme_color": "#FF5E1E",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "categories": ["business", "productivity", "finance"],
   "prefer_related_applications": false,
   "icons": [

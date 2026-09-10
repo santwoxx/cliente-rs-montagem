@@ -6,7 +6,7 @@
    abaixo. É isso que faz o celular do montador baixar a versão nova.
    ========================================================================== */
 
-const CACHE_VERSION = 'v15';
+const CACHE_VERSION = 'v16';
 const CACHE_APP = `rs-montagens-app-${CACHE_VERSION}`;
 const CACHE_CDN = `rs-montagens-cdn-${CACHE_VERSION}`;
 
@@ -15,6 +15,7 @@ const APP_SHELL = [
   '/',
   '/index.html',
   '/manifest.webmanifest',
+  '/favicon.ico',
   '/css/main.css',
   '/css/components.css',
   '/css/calendar.css',
@@ -39,10 +40,14 @@ const APP_SHELL = [
   '/js/notifications.js',
   '/js/pwa.js',
   '/js/app.js',
+  '/icons/logo.png',
   '/icons/icon-192.png',
   '/icons/icon-512.png',
   '/icons/icon-maskable-192.png',
-  '/icons/icon-maskable-512.png'
+  '/icons/icon-maskable-512.png',
+  '/icons/apple-touch-icon.png',
+  '/icons/favicon-64.png',
+  '/icons/favicon-32.png'
 ];
 
 /* Domínios de CDN que valem guardar para o app abrir offline. */

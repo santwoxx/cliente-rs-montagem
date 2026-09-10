@@ -30,7 +30,7 @@ const DEFAULT_SERVICE_TYPES = [
 // que o cliente final recebe.
 const DEFAULT_SETTINGS = {
   montadorName: '',
-  companyName: 'RS Montagens de Móveis',
+  companyName: 'RS Móveis - Marcenaria de Alto Padrão',
   phone: '',
   profession: 'Montador de Móveis',
   cnpj: '',
@@ -40,7 +40,7 @@ const DEFAULT_SETTINGS = {
   pixType: 'Telefone',
   bankName: '',
   pixHolder: '',
-  logo: '',
+  logo: '/icons/logo.png',
   monthlyGoal: 5000,
   theme: 'light',
   reviewLink: '',
@@ -316,9 +316,15 @@ class StorageManager {
     this.save(STORAGE_KEYS.CUSTOMERS, []);
     this.save(STORAGE_KEYS.TRANSACTIONS, []);
 
-    // 3. Marca que a limpeza para produção foi concluída
+    // 3. Marca que a limpeza para produção foi concluída e define a logo oficial
     settings.limpezaProducaoV1 = true;
     settings.limpezaProducaoData = Utils.todayISO();
+    if (!settings.logo) {
+      settings.logo = '/icons/logo.png';
+    }
+    if (!settings.companyName || settings.companyName === 'RS Montagens de Móveis') {
+      settings.companyName = 'RS Móveis - Marcenaria de Alto Padrão';
+    }
     this.save(STORAGE_KEYS.SETTINGS, settings);
 
     // 4. Sincroniza imediatamente com a nuvem (Firestore)
