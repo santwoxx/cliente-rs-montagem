@@ -581,7 +581,7 @@ class App {
     // Reset default data button
     const resetBtn = document.getElementById('btn-reset-data');
     if (resetBtn) {
-      resetBtn.addEventListener('click', () => {
+      resetBtn.addEventListener('click', async () => {
         // Duas confirmações: some com o histórico inteiro, inclusive na nuvem.
         if (!confirm(
           'Apagar TODAS as montagens, clientes, lançamentos, lojas, montadores e fotos?\n\n' +
@@ -590,7 +590,7 @@ class App {
 
         if (!confirm('Última confirmação: você já baixou o backup?')) return;
 
-        window.storageManager.apagarTudo();
+        await window.storageManager.apagarTudo();
         this.showToast('Tudo apagado. O sistema está zerado.', 'success');
         setTimeout(() => window.location.reload(), 1200);
       });

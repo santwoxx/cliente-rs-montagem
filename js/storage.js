@@ -206,6 +206,7 @@ class StorageManager {
     }
 
     this.limparDadosDeDemonstracao();
+    this.limparParaProducao();
   }
 
   /**
@@ -289,6 +290,56 @@ class StorageManager {
     this.save(STORAGE_KEYS.SETTINGS, settings);
 
     if (mexeu) console.info('[dados] Registros de demonstração removidos.');
+  }
+
+  /**
+   * Limpeza definitiva para entrada em produção:
+   * Zera todos os serviços de teste ("Mae", "Maria", "Mariaa", etc.), clientes e transações do financeiro.
+   * Roda uma única vez (controlada por settings.limpezaProducaoV1), garantindo base 100% zerada para o cliente.
+   */
+  async limparParaProducao() {
+    const settings = this.get(STORAGE_KEYS.SETTINGS) || {};
+    if (settings.limpezaProducaoV1) return;
+
+    console.info('[producao] Limpando dados de teste (serviços, clientes, financeiro e fotos) para produção...');
+
+    // 1. Limpa fotos de montagens antigas
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const chave = localStorage.key(i);
+      if (chave && chave.startsWith('movelpro_fotos_')) {
+        try { localStorage.removeItem(chave); } catch (e) { /* ok */ }
+      }
+    }
+
+    // 2. Zera as entidades de teste solicitadas
+    this.save(STORAGE_KEYS.SERVICES, []);
+    this.save(STORAGE_KEYS.CUSTOMERS, []);
+    this.save(STORAGE_KEYS.TRANSACTIONS, []);
+
+    // 3. Marca que a limpeza para produção foi concluída
+    settings.limpezaProducaoV1 = true;
+    settings.limpezaProducaoData = Utils.todayISO();
+    this.save(STORAGE_KEYS.SETTINGS, settings);
+
+    // 4. Sincroniza imediatamente com a nuvem (Firestore)
+    this.syncToFirestore('services', [], true);
+    this.syncToFirestore('customers', [], true);
+    this.syncToFirestore('transactions', [], true);
+    this.syncToFirestore('settings', settings, true);
+
+    await this.enviarPendentes();
+
+    if (window.app && window.app.updateAllViews) {
+      window.app.updateAllViews();
+    }
+    if (window.calendarController && window.calendarController.render) {
+      window.calendarController.render();
+      if (window.calendarController.selectedDate) {
+        window.calendarController.renderDayServices(window.calendarController.selectedDate);
+      }
+    }
+
+    console.info('[producao] Base zerada com sucesso para entrada em produção.');
   }
 
   get(key) {
@@ -566,6 +617,13 @@ class StorageManager {
       // Agora, autenticado, a limpeza roda de novo e vai junto para o Firestore.
       this.limparDadosDeDemonstracao();
 
+      // Se os dados baixados da nuvem ainda contiverem os testes de homologação,
+      // executa a limpeza para produção com a sessão autenticada:
+      const currentSettings = this.get(STORAGE_KEYS.SETTINGS) || {};
+      if (!currentSettings.limpezaProducaoV1) {
+        await this.limparParaProducao();
+      }
+
       if (hasUpdates && window.app) {
         window.app.updateAllViews();
         window.app.showToast('Dados sincronizados com a nuvem.', 'info');
@@ -733,7 +791,7 @@ class StorageManager {
    * aparelho e na nuvem. As configurações do perfil (nome, PIX, logo, tabela
    * de preços) continuam, porque apagá-las obrigaria a recadastrar tudo.
    */
-  apagarTudo() {
+  async apagarTudo() {
     // As fotos saem primeiro, senão ficam ocupando espaço sem serviço dono.
     for (let i = localStorage.length - 1; i >= 0; i--) {
       const chave = localStorage.key(i);
@@ -747,7 +805,7 @@ class StorageManager {
     this.saveAssemblers([]);
 
     // Sobe agora, sem esperar os 2,5 s de agrupamento: a tela vai recarregar.
-    this.enviarPendentes();
+    await this.enviarPendentes();
   }
 }
 
