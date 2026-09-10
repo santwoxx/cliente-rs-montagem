@@ -334,3 +334,54 @@
     display: none !important;
   }
 }
+
+/* --------------------------------------------------------------------------
+   Palco de exportação do PDF
+
+   A nota vive dentro de um modal com position:fixed, transform:scale() e
+   overflow:hidden — contexto em que o html2canvas erra a origem e corta a
+   lateral. Antes de virar PDF ela é clonada para cá: largura fixa, sem
+   transform, sem rolagem, sem altura máxima e sempre em papel branco.
+   -------------------------------------------------------------------------- */
+.pdf-export-stage {
+  position: absolute;
+  top: 0;
+  left: -20000px;
+  width: 760px;
+  padding: 0;
+  margin: 0;
+  background: #FFFFFF;
+  color: #0F172A;
+  /* O tema escuro não pode vazar para o papel. */
+  color-scheme: light;
+}
+
+.pdf-export-stage .printable-receipt {
+  width: 760px;
+  max-width: none;
+  min-height: 0;
+  max-height: none;
+  margin: 0;
+  overflow: visible;
+  transform: none;
+  box-shadow: none;
+  border: 1px solid #E2E8F0;
+  border-radius: 10px;
+  padding: 30px 32px;
+  background: #FFFFFF;
+  color: #0F172A;
+}
+
+/* Quebra de página não pode partir um bloco no meio. */
+.pdf-export-stage .receipt-block,
+.pdf-export-stage .receipt-header,
+.pdf-export-stage .receipt-signatures,
+.pdf-export-stage .receipt-table tr {
+  page-break-inside: avoid;
+  break-inside: avoid;
+}
+
+/* Assinaturas coladas no rodapé ficam apertadas no papel. */
+.pdf-export-stage .receipt-signatures {
+  margin-top: 48px;
+}

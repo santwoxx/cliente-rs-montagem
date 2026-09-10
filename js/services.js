@@ -206,6 +206,8 @@ class ServicesController {
 
     const modalTitle = document.getElementById('service-modal-title');
     if (modalTitle) modalTitle.innerHTML = '<i class="fa-solid fa-calendar-plus"></i> Novo Agendamento de Montagem';
+    const submitBtn = document.getElementById('service-submit-btn');
+    if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-calendar-check"></i> Agendar Montagem';
 
     // Populate clients dropdown
     this.populateClientSelect();
@@ -1129,6 +1131,8 @@ class ServicesController {
 
     const modalTitle = document.getElementById('service-modal-title');
     if (modalTitle) modalTitle.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Montagem';
+    const submitBtn = document.getElementById('service-submit-btn');
+    if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Salvar Alterações';
 
     window.app.openModal('service-modal');
   }

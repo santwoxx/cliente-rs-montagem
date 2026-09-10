@@ -3,6 +3,10 @@
    Pricing calculator, WhatsApp quote builder & printable receipts
    ========================================================================== */
 
+// Largura do palco de exportacao, em pixels. 760 px corresponde a uma A4
+// retrato de 96 dpi (794 px) menos as margens de 10 mm dos dois lados.
+const PDF_LARGURA_PALCO = 760;
+
 class QuotesController {
   constructor() {
     this.selectedItems = {}; // { id: quantity }
@@ -123,25 +127,29 @@ class QuotesController {
     }
 
     const nomeArquivo = this.nomeDoArquivoPDF();
+    const palco = this.montarPalcoDeExportacao(nota);
 
     try {
       const blob = await html2pdf()
         .set({
-          margin: [8, 8, 8, 8],
+          margin: [10, 10, 10, 10],
           filename: nomeArquivo,
           image: { type: 'jpeg', quality: 0.95 },
           html2canvas: {
             scale: 2,
             useCORS: true,
             backgroundColor: '#FFFFFF',
-            // A nota rola dentro do modal; sem isto o PDF sai cortado.
-            scrollY: 0,
-            windowWidth: nota.scrollWidth
+            // O palco tem largura fixa e conhecida, então a captura é
+            // determinística: nada de herdar rolagem ou zoom da tela.
+            width: PDF_LARGURA_PALCO,
+            windowWidth: PDF_LARGURA_PALCO,
+            scrollX: 0,
+            scrollY: 0
           },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
           pagebreak: { mode: ['avoid-all', 'css'] }
         })
-        .from(nota)
+        .from(palco.alvo)
         .outputPdf('blob');
 
       await this.entregarPDF(blob, nomeArquivo);
@@ -150,11 +158,35 @@ class QuotesController {
       window.app.showToast('Não consegui gerar o PDF. Abrindo a impressão.', 'danger');
       window.print();
     } finally {
+      palco.desmontar();
       if (btn) {
         btn.disabled = false;
         btn.innerHTML = rotuloOriginal;
       }
     }
+  }
+
+  /**
+   * Copia a nota para fora do modal antes de virar PDF.
+   *
+   * Dentro do modal a nota está sob um `position: fixed` com `transform:
+   * scale()` e `overflow: hidden`, e o html2canvas calcula a origem errado
+   * nesse contexto — foi o que cortou a lateral esquerda da nota do cliente.
+   * Aqui ela é clonada para um palco solto no corpo da página, com largura
+   * fixa, sem transform, sem rolagem e sem altura máxima.
+   */
+  montarPalcoDeExportacao(nota) {
+    const palco = document.createElement('div');
+    palco.className = 'pdf-export-stage';
+
+    const copia = nota.cloneNode(true);
+    palco.appendChild(copia);
+    document.body.appendChild(palco);
+
+    return {
+      alvo: copia,
+      desmontar: () => palco.remove()
+    };
   }
 
   /** Compartilha no Android quando dá; se não, baixa o arquivo. */
