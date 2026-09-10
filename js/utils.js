@@ -106,6 +106,34 @@ const Utils = {
     return this.serviceTotal(service) - this.toNumber(service && service.cost);
   },
 
+  /* ---------- Pagamento do montador ---------- */
+  // O cliente paga o total; desse total sai a parte do montador que executou.
+  // Guardamos sempre o VALOR em reais (assemblerPay). A porcentagem é só um
+  // atalho de digitação: ao escolher 30% o campo já vira número redondo,
+  // porque o montador arredonda tudo na hora de pagar.
+  assemblerPay(service) {
+    if (!service) return 0;
+    return this.toNumber(service.assemblerPay);
+  },
+
+  // Quanto sobra para o dono: total - material - pagamento do montador.
+  ownerNet(service) {
+    return this.serviceProfit(service) - this.assemblerPay(service);
+  },
+
+  // 30% de 574 = 172,20 -> vira 172. Número redondo, do jeito que ele pediu.
+  roundPay(value) {
+    return Math.round(this.toNumber(value));
+  },
+
+  // O montador que executou é o próprio dono? Então não há repasse a pagar.
+  isOwnerAssembler(service) {
+    if (!service || !service.assemblerId) return false;
+    const assembler = (window.storageManager.getAssemblers() || [])
+      .find(a => a.id === service.assemblerId);
+    return !!(assembler && assembler.isOwner);
+  },
+
   /* ---------- Texto ---------- */
   // Primeira letra maiúscula para as iniciais dos avatares.
   initialOf(name, fallback = 'C') {

@@ -35,11 +35,15 @@ service cloud.firestore {
       // Leitura permitida para qualquer usuário autenticado (Admins e Funcionários)
       allow read: if isAuthenticated();
 
-      // Escrita operacional (Admins e Funcionários): serviços e clientes.
+      // Escrita operacional (Admins e Funcionários): serviços, clientes e as
+      // fotos do móvel de cada serviço (documentos 'service_photos_<id>', um
+      // por serviço — as fotos não cabem no documento único de serviços).
       // Todo o resto — configurações da empresa, financeiro, cadastro de lojas
       // parceiras e cadastro de montadores — é exclusivo do Administrador.
       // Uma única regra evita que um `allow` mais permissivo anule o outro.
-      allow write: if (docId == 'services' || docId == 'customers')
+      allow write: if (docId == 'services'
+                       || docId == 'customers'
+                       || docId.matches('^service_photos_.*'))
         ? isAuthenticated()
         : isAdmin();
     }

@@ -6,6 +6,9 @@
 class ServicesController {
   constructor() {
     this.currentEditingId = null;
+    // Id usado para amarrar as fotos. Num serviço novo ele já nasce aqui,
+    // antes de salvar, senão não haveria onde pendurar a foto escolhida.
+    this.fotoServiceId = null;
   }
 
   init() {
@@ -44,6 +47,31 @@ class ServicesController {
     if (typeInput) {
       typeInput.addEventListener('input', () => this.highlightTypeChip(typeInput.value));
     }
+
+    // Pagamento do montador digitado na mão
+    const payInput = document.getElementById('service-assembler-pay');
+    if (payInput) payInput.addEventListener('input', () => this.updateProfitPreview());
+
+    // Atalhos de porcentagem: viram valor redondo na hora
+    const payChips = document.getElementById('service-pay-chips');
+    if (payChips) {
+      payChips.addEventListener('click', (e) => {
+        const chip = e.target.closest('.pay-chip');
+        if (!chip) return;
+        this.aplicarPorcentagemDoMontador(Number(chip.dataset.payPercent));
+      });
+    }
+
+    // Fotos: galeria e câmera caem no mesmo tratamento
+    ['service-fotos-galeria', 'service-fotos-camera'].forEach(id => {
+      const input = document.getElementById(id);
+      if (!input) return;
+      input.addEventListener('change', async (e) => {
+        const arquivos = e.target.files;
+        if (arquivos && arquivos.length) await this.adicionarFotos(arquivos);
+        e.target.value = ''; // permite escolher a mesma foto de novo
+      });
+    });
 
     // Client select auto-filling address & phone
     const clientSelect = document.getElementById('service-client-select');
@@ -94,9 +122,43 @@ class ServicesController {
     if (totalEl) totalEl.textContent = Utils.formatBRL(total);
 
     const el = document.getElementById('service-profit-preview');
-    if (!el) return;
-    el.textContent = Utils.formatBRL(profit);
-    el.classList.toggle('is-negative', profit < 0);
+    if (el) {
+      el.textContent = Utils.formatBRL(profit);
+      el.classList.toggle('is-negative', profit < 0);
+    }
+
+    // Sobra para o dono = lucro - o que vai para o montador
+    const pay = Utils.toNumber(document.getElementById('service-assembler-pay')?.value);
+    const sobra = profit - pay;
+    const ownerEl = document.getElementById('service-owner-preview');
+    if (ownerEl) {
+      ownerEl.textContent = Utils.formatBRL(sobra);
+      ownerEl.classList.toggle('is-negative', sobra < 0);
+    }
+  }
+
+  /** Chip de porcentagem: calcula sobre o total e arredonda para real cheio. */
+  aplicarPorcentagemDoMontador(percentual) {
+    const input = document.getElementById('service-assembler-pay');
+    if (!input) return;
+
+    if (!percentual) {
+      input.value = '0';
+      this.updateProfitPreview();
+      return;
+    }
+
+    const value = Utils.toNumber(document.getElementById('service-value')?.value);
+    const travelFee = Utils.toNumber(document.getElementById('service-travel')?.value);
+    const total = value + travelFee;
+
+    if (total <= 0) {
+      window.app.showToast('Informe primeiro o valor do serviço.', 'warning');
+      return;
+    }
+
+    input.value = String(Utils.roundPay((total * percentual) / 100));
+    this.updateProfitPreview();
   }
 
   /** Popula o seletor de montador responsável. */
@@ -166,6 +228,13 @@ class ServicesController {
     if (costInput) costInput.value = '0';
     const travelInput = document.getElementById('service-travel');
     if (travelInput) travelInput.value = '0';
+    const payInput = document.getElementById('service-assembler-pay');
+    if (payInput) payInput.value = '0';
+
+    // O serviço já nasce com id para as fotos terem onde se prender
+    // antes mesmo de o formulário ser salvo.
+    this.fotoServiceId = 's_' + Date.now();
+    this.renderFotosDoFormulario(this.fotoServiceId, []);
 
     this.highlightTypeChip('');
     this.updateProfitPreview();
@@ -202,6 +271,7 @@ class ServicesController {
     const value = Utils.toNumber(document.getElementById('service-value').value);
     const travelFee = Utils.toNumber(document.getElementById('service-travel').value);
     const cost = Utils.toNumber(document.getElementById('service-cost').value);
+    const assemblerPay = Utils.roundPay(document.getElementById('service-assembler-pay').value);
     const paymentMethod = document.getElementById('service-payment-method').value;
     const status = document.getElementById('service-status').value;
     const paymentStatus = document.getElementById('service-payment-status').value;
@@ -260,6 +330,7 @@ class ServicesController {
           value,
           travelFee,
           cost,
+          assemblerPay,
           assemblerId,
           assemblerName,
           storeId,
@@ -277,13 +348,16 @@ class ServicesController {
           this.removeIncomeTransaction(services[index].id);
         }
         this.recordMaterialExpense(services[index]);
+        this.recordAssemblerExpense(services[index]);
 
         window.app.showToast('Serviço atualizado com sucesso!', 'success');
       }
     } else {
       // New service
       const newService = {
-        id: 's_' + Date.now(),
+        // Reaproveita o id criado na abertura do modal: é nele que as fotos
+        // escolhidas antes de salvar já foram guardadas.
+        id: this.fotoServiceId || ('s_' + Date.now()),
         clientId,
         clientName,
         clientPhone: phone,
@@ -295,6 +369,7 @@ class ServicesController {
         value,
         travelFee,
         cost,
+        assemblerPay,
         assemblerId,
         assemblerName,
         storeId,
@@ -313,6 +388,7 @@ class ServicesController {
         this.recordIncomeTransaction(newService);
         this.recordMaterialExpense(newService);
       }
+      this.recordAssemblerExpense(newService);
 
       window.app.showToast('Novo serviço agendado com sucesso!', 'success');
     }
@@ -339,6 +415,7 @@ class ServicesController {
       // Record transaction if not already existing
       this.recordIncomeTransaction(service);
       this.recordMaterialExpense(service);
+      this.recordAssemblerExpense(service);
       window.app.showToast('Parabéns! Montagem concluída e pagamento registrado.', 'success');
     }
 
@@ -382,6 +459,163 @@ class ServicesController {
   }
 
   /** Remove a receita lançada quando o serviço deixa de estar concluído. */
+  /* ---------- Fotos do móvel ---------- */
+
+  /** Recebe os arquivos escolhidos, comprime e devolve a grade atualizada. */
+  async adicionarFotos(arquivos) {
+    const serviceId = this.fotoServiceId;
+    if (!serviceId) return;
+
+    const aviso = document.getElementById('service-fotos-aviso');
+    if (aviso) aviso.textContent = 'Preparando as fotos...';
+
+    const resultado = await window.photoStore.adicionar(serviceId, arquivos);
+    this.renderFotosDoFormulario(serviceId, resultado.fotos);
+
+    if (resultado.adicionadas > 0) {
+      window.app.showToast(
+        resultado.adicionadas === 1 ? 'Foto adicionada.' : `${resultado.adicionadas} fotos adicionadas.`,
+        'success'
+      );
+    }
+    if (resultado.motivo === 'limite') {
+      window.app.showToast(
+        `Cabem no máximo ${window.FOTOS_CONFIG.maxPorServico} fotos por serviço.`,
+        'warning'
+      );
+    }
+    if (resultado.falhas) {
+      window.app.showToast(
+        `${resultado.falhas} foto(s) não entraram: arquivo grande demais.`,
+        'danger'
+      );
+    }
+  }
+
+  /** Grade de miniaturas dentro do formulário, com o X para remover. */
+  renderFotosDoFormulario(serviceId, fotos) {
+    const alvo = document.getElementById('service-fotos-preview');
+    const contador = document.getElementById('service-fotos-contador');
+    const aviso = document.getElementById('service-fotos-aviso');
+    if (!alvo) return;
+
+    const lista = fotos || window.photoStore.getLocal(serviceId);
+    alvo.innerHTML = window.photoStore.renderMiniaturas(lista, { podeRemover: true, serviceId });
+
+    if (contador) contador.textContent = `${lista.length} de ${window.FOTOS_CONFIG.maxPorServico}`;
+    if (aviso) {
+      aviso.textContent = `Até ${window.FOTOS_CONFIG.maxPorServico} fotos por serviço. Elas são reduzidas automaticamente para não pesar.`;
+    }
+  }
+
+  /** Grade de miniaturas dentro da ficha do serviço. */
+  renderFotosDaFicha(serviceId, fotos) {
+    const alvo = document.getElementById('detail-fotos');
+    if (!alvo) return;
+
+    const lista = fotos || window.photoStore.getLocal(serviceId);
+    const podeRemover = !window.authController || window.authController.podeVerValoresCheios();
+
+    if (lista.length === 0) {
+      alvo.innerHTML = '<p class="foto-vazio">Nenhuma foto neste serviço.</p>';
+      return;
+    }
+
+    alvo.innerHTML = window.photoStore.renderMiniaturas(lista, { podeRemover, serviceId });
+  }
+
+  /**
+   * Painel de valores da ficha, montado conforme quem está olhando.
+   * O administrador vê o dinheiro todo. O montador vê só o que ele recebe:
+   * nunca o valor cobrado do cliente, nem o lucro do dono.
+   */
+  renderPainelDeValores(service) {
+    const auth = window.authController;
+    const ehAdmin = !auth || auth.podeVerValoresCheios();
+
+    if (!ehAdmin) {
+      if (!auth.servicoEhMeu(service)) {
+        return `
+          <div class="money-grid">
+            <div class="money-card">
+              <div class="money-icon icon-blue"><i class="fa-solid fa-user-lock"></i></div>
+              <span class="money-label">Valores</span>
+              <strong class="money-value" style="font-size: 1rem;">Montagem de outro montador</strong>
+            </div>
+          </div>
+        `;
+      }
+
+      const pay = Utils.assemblerPay(service);
+      return `
+        <div class="money-grid">
+          <div class="money-card money-card-primary">
+            <div class="money-icon"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+            <span class="money-label">Você recebe por esta montagem</span>
+            <strong class="money-value">${Utils.formatBRL(pay)}</strong>
+          </div>
+          ${pay <= 0 ? `
+            <div class="money-card">
+              <span class="money-label">Combinado</span>
+              <strong class="money-value" style="font-size: 0.95rem;">Ainda não definido</strong>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    const value = Utils.toNumber(service.value);
+    const travelFee = Utils.toNumber(service.travelFee);
+    const cost = Utils.toNumber(service.cost);
+    const total = Utils.serviceTotal(service);
+    const profit = Utils.serviceProfit(service);
+    const pay = Utils.assemblerPay(service);
+    const sobra = Utils.ownerNet(service);
+    const ehDono = Utils.isOwnerAssembler(service);
+
+    return `
+      <div class="money-grid">
+        <div class="money-card">
+          <div class="money-icon icon-green"><i class="fa-solid fa-dollar-sign"></i></div>
+          <span class="money-label">Valor do serviço</span>
+          <strong class="money-value">${Utils.formatBRL(value)}</strong>
+        </div>
+        <div class="money-card">
+          <div class="money-icon icon-blue"><i class="fa-solid fa-car"></i></div>
+          <span class="money-label">Deslocamento</span>
+          <strong class="money-value">${Utils.formatBRL(travelFee)}</strong>
+        </div>
+        <div class="money-card">
+          <div class="money-icon icon-orange"><i class="fa-solid fa-basket-shopping"></i></div>
+          <span class="money-label">Gastos com material</span>
+          <strong class="money-value">${Utils.formatBRL(cost)}</strong>
+        </div>
+        <div class="money-card">
+          <span class="money-label">Total (cliente paga)</span>
+          <strong class="money-value">${Utils.formatBRL(total)}</strong>
+        </div>
+        ${pay > 0 && !ehDono ? `
+          <div class="money-card">
+            <div class="money-icon icon-orange"><i class="fa-solid fa-helmet-safety"></i></div>
+            <span class="money-label">Montador recebe</span>
+            <strong class="money-value">${Utils.formatBRL(pay)}</strong>
+          </div>
+          <div class="money-card money-card-primary ${sobra < 0 ? 'is-negative' : ''}">
+            <div class="money-icon"><i class="fa-solid fa-wallet"></i></div>
+            <span class="money-label">Sobra para você</span>
+            <strong class="money-value">${Utils.formatBRL(sobra)}</strong>
+          </div>
+        ` : `
+          <div class="money-card money-card-primary ${profit < 0 ? 'is-negative' : ''}">
+            <div class="money-icon"><i class="fa-solid fa-wallet"></i></div>
+            <span class="money-label">Lucro líquido</span>
+            <strong class="money-value">${Utils.formatBRL(profit)}</strong>
+          </div>
+        `}
+      </div>
+    `;
+  }
+
   removeIncomeTransaction(serviceId) {
     const transactions = window.storageManager.getTransactions();
     const filtered = transactions.filter(t => !(t.serviceId === serviceId && t.type === 'receita'));
@@ -419,6 +653,52 @@ class ServicesController {
       paymentMethod: service.paymentMethod || 'PIX',
       status: 'pago',
       serviceId: service.id,
+      createdAt: new Date().toISOString()
+    };
+
+    if (index !== -1) {
+      transactions[index] = { ...transactions[index], ...expense };
+    } else {
+      transactions.push(expense);
+    }
+
+    window.storageManager.saveTransactions(transactions);
+  }
+
+  /**
+   * Lança o repasse ao montador como despesa, para o caixa bater com a
+   * realidade: entrou o valor cheio do cliente, saiu a parte do montador.
+   * Quando quem monta é o próprio dono não há repasse — o dinheiro fica com ele.
+   */
+  recordAssemblerExpense(service) {
+    const transactions = window.storageManager.getTransactions();
+    const expenseId = 'mont_' + service.id;
+    const index = transactions.findIndex(t => t.id === expenseId);
+
+    const pay = Utils.assemblerPay(service);
+    const ehDono = Utils.isOwnerAssembler(service);
+    const cancelado = service.status === 'cancelado';
+
+    // Sem repasse a fazer: se havia lançamento antigo, tira do caixa.
+    if (pay <= 0 || ehDono || cancelado) {
+      if (index !== -1) {
+        transactions.splice(index, 1);
+        window.storageManager.saveTransactions(transactions);
+      }
+      return;
+    }
+
+    const expense = {
+      id: expenseId,
+      type: 'despesa',
+      category: 'Pagamento de Montador',
+      description: `Montador ${service.assemblerName || ''}: ${service.description} (${service.clientName})`.trim(),
+      value: pay,
+      date: service.date,
+      paymentMethod: service.paymentMethod || 'PIX',
+      status: service.status === 'concluido' ? 'pago' : 'pendente',
+      serviceId: service.id,
+      assemblerId: service.assemblerId || null,
       createdAt: new Date().toISOString()
     };
 
@@ -479,31 +759,11 @@ class ServicesController {
         </div>
       </div>
 
-      <div class="money-grid">
-        <div class="money-card">
-          <div class="money-icon icon-green"><i class="fa-solid fa-dollar-sign"></i></div>
-          <span class="money-label">Valor do serviço</span>
-          <strong class="money-value">${Utils.formatBRL(value)}</strong>
-        </div>
-        <div class="money-card">
-          <div class="money-icon icon-blue"><i class="fa-solid fa-car"></i></div>
-          <span class="money-label">Deslocamento</span>
-          <strong class="money-value">${Utils.formatBRL(travelFee)}</strong>
-        </div>
-        <div class="money-card">
-          <div class="money-icon icon-orange"><i class="fa-solid fa-basket-shopping"></i></div>
-          <span class="money-label">Gastos com material</span>
-          <strong class="money-value">${Utils.formatBRL(cost)}</strong>
-        </div>
-        <div class="money-card">
-          <span class="money-label">Total (cliente paga)</span>
-          <strong class="money-value">${Utils.formatBRL(total)}</strong>
-        </div>
-        <div class="money-card money-card-primary ${profit < 0 ? 'is-negative' : ''}">
-          <div class="money-icon"><i class="fa-solid fa-wallet"></i></div>
-          <span class="money-label">Lucro líquido</span>
-          <strong class="money-value">${Utils.formatBRL(profit)}</strong>
-        </div>
+      ${this.renderPainelDeValores(service)}
+
+      <span class="detail-section-label"><i class="fa-solid fa-camera"></i> Fotos do móvel</span>
+      <div id="detail-fotos" class="detail-fotos">
+        <p class="foto-vazio">Carregando fotos...</p>
       </div>
 
       <div class="detail-block">
@@ -647,6 +907,16 @@ class ServicesController {
     `;
 
     window.app.openModal('service-detail-modal');
+
+    // Mostra na hora o que já está no aparelho e busca o resto na nuvem —
+    // é assim que o montador vê no celular dele a foto que o dono anexou.
+    this.renderFotosDaFicha(serviceId, window.photoStore.getLocal(serviceId));
+    window.photoStore.carregarDaNuvem(serviceId).then(fotos => {
+      const modalAberto = document.getElementById('service-detail-modal');
+      if (modalAberto && modalAberto.classList.contains('active')) {
+        this.renderFotosDaFicha(serviceId, fotos);
+      }
+    });
   }
 
   /**
@@ -794,6 +1064,7 @@ class ServicesController {
       service.paymentStatus = 'pago';
       this.recordIncomeTransaction(service);
       this.recordMaterialExpense(service);
+      this.recordAssemblerExpense(service);
       window.app.showToast('Montagem concluída e lançada no financeiro.', 'success');
     } else if (status === 'cancelado') {
       service.paymentStatus = 'pendente';
@@ -801,6 +1072,7 @@ class ServicesController {
       this.removeIncomeTransaction(service.id);
       service.cost = 0;
       this.recordMaterialExpense(service);
+      this.recordAssemblerExpense(service);
       window.app.showToast('Serviço cancelado e retirado do financeiro.', 'warning');
     } else {
       service.paymentStatus = 'pendente';
@@ -838,6 +1110,7 @@ class ServicesController {
     document.getElementById('service-value').value = s.value || '';
     document.getElementById('service-travel').value = Utils.toNumber(s.travelFee);
     document.getElementById('service-cost').value = Utils.toNumber(s.cost);
+    document.getElementById('service-assembler-pay').value = Utils.toNumber(s.assemblerPay);
     document.getElementById('service-payment-method').value = s.paymentMethod || 'PIX';
     document.getElementById('service-status').value = s.status || 'agendado';
     document.getElementById('service-payment-status').value = s.paymentStatus || 'pendente';
@@ -845,6 +1118,14 @@ class ServicesController {
 
     this.highlightTypeChip(s.serviceType || 'Montagem');
     this.updateProfitPreview();
+
+    // Fotos deste serviço: mostra o que já está no aparelho e, em paralelo,
+    // busca na nuvem (caso tenham sido tiradas em outro celular).
+    this.fotoServiceId = serviceId;
+    this.renderFotosDoFormulario(serviceId, window.photoStore.getLocal(serviceId));
+    window.photoStore.carregarDaNuvem(serviceId).then(fotos => {
+      if (this.fotoServiceId === serviceId) this.renderFotosDoFormulario(serviceId, fotos);
+    });
 
     const modalTitle = document.getElementById('service-modal-title');
     if (modalTitle) modalTitle.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Montagem';
@@ -860,10 +1141,13 @@ class ServicesController {
     services = services.filter(s => s.id !== serviceId);
     window.storageManager.saveServices(services);
 
-    // Tira do financeiro a receita e a despesa de material deste serviço.
+    // Tira do financeiro a receita e as despesas (material e montador) deste serviço.
     const transactions = window.storageManager.getTransactions()
       .filter(t => t.serviceId !== serviceId);
     window.storageManager.saveTransactions(transactions);
+
+    // As fotos vão junto, senão ficam ocupando espaço sem dono.
+    window.photoStore.apagarTudo(serviceId);
 
     window.app.closeModal('service-detail-modal');
     window.app.showToast('Serviço excluído com sucesso.', 'warning');

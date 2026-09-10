@@ -26,3 +26,7 @@ npm-debug.log*
 
 # Optional large media
 # WhatsApp Video 2026-09-09 at 12.58.36.mp4
+
+# Mensagens de voz do cliente: ficam só na máquina de quem desenvolve.
+# O que foi pedido nelas está transcrito em TRANSCRICAO-AUDIOS.md.
+audios/

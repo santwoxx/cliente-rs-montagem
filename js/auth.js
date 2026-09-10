@@ -337,12 +337,18 @@ class AuthController {
       submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cadastrando...';
     }
 
+    let tempApp = null;
+
     try {
       // Create secondary Firebase App instance so Admin session is NOT interrupted
       const tempAppName = 'SecondaryAuthApp_' + Date.now();
-      const tempApp = firebase.initializeApp(window.firebaseConfig, tempAppName);
+      tempApp = firebase.initializeApp(window.firebaseConfig, tempAppName);
       const userCredential = await tempApp.auth().createUserWithEmailAndPassword(email, password);
-      
+
+      // Guarda o uid ANTES de encerrar o app temporário: depois do delete()
+      // o objeto do usuário fica inválido e o cadastro ia para o Firestore sem id.
+      const uid = userCredential.user.uid;
+
       // Update display name
       if (userCredential.user) {
         await userCredential.user.updateProfile({ displayName: name });
@@ -350,10 +356,11 @@ class AuthController {
 
       await tempApp.auth().signOut();
       await tempApp.delete();
+      tempApp = null;
 
       // Save employee record in Firestore
       const employeeData = {
-        uid: userCredential.user.uid,
+        uid,
         name,
         email,
         role: 'funcionario',
@@ -362,13 +369,17 @@ class AuthController {
       };
 
       if (window.firestoreDb) {
-        await window.firestoreDb.collection('users').doc(userCredential.user.uid).set(employeeData);
+        await window.firestoreDb.collection('users').doc(uid).set(employeeData);
       }
 
       // Also save in local storage team cache
       const localTeam = JSON.parse(localStorage.getItem('movelpro_team') || '[]');
       localTeam.push(employeeData);
       localStorage.setItem('movelpro_team', JSON.stringify(localTeam));
+
+      // Já deixa o montador cadastrado com este login vinculado, senão o
+      // funcionário entra no sistema e não enxerga as montagens dele.
+      this.vincularMontador(name, email);
 
       window.app.showToast(`Funcionário ${name} cadastrado com sucesso! Ele já pode fazer login.`, 'success');
 
@@ -377,17 +388,110 @@ class AuthController {
       this.loadTeamMembers();
     } catch (e) {
       console.error('Erro ao cadastrar funcionário:', e);
-      let errMsg = e.message;
-      if (e.code === 'auth/email-already-in-use') {
-        errMsg = 'Este e-mail já está cadastrado no sistema.';
-      }
-      window.app.showToast('Erro ao cadastrar funcionário: ' + errMsg, 'danger');
+      window.app.showToast(this.explicarErroDeCadastro(e), 'danger');
     } finally {
+      // Se quebrou no meio, o app temporário precisa sair do ar de qualquer jeito,
+      // senão o próximo cadastro falha por nome de app duplicado.
+      if (tempApp) {
+        try { await tempApp.delete(); } catch (_) { /* já foi */ }
+      }
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Cadastrar Funcionário';
       }
     }
+  }
+
+  /**
+   * Traduz o erro do Firebase para uma frase que diz O QUE FAZER.
+   * O cadastro de funcionário costuma falhar por configuração do projeto,
+   * não por erro de digitação — e a mensagem crua do Firebase não ajuda.
+   */
+  explicarErroDeCadastro(e) {
+    const codigo = (e && e.code) || '';
+
+    const mapa = {
+      'auth/email-already-in-use':
+        'Este e-mail já tem conta no sistema. Use outro e-mail ou apague a conta antiga no Firebase.',
+      'auth/invalid-email':
+        'E-mail inválido. Confira se está escrito certo, sem espaço sobrando.',
+      'auth/weak-password':
+        'Senha fraca. Use no mínimo 6 caracteres.',
+      'auth/operation-not-allowed':
+        'O login por e-mail/senha está DESLIGADO no Firebase. Abra o Console do Firebase > Authentication > Sign-in method e ative "E-mail/senha".',
+      'auth/admin-restricted-operation':
+        'O Firebase está bloqueando a criação de contas pelo app. Abra o Console do Firebase > Authentication > Settings > User actions e marque "Enable create (sign-up)".',
+      'auth/network-request-failed':
+        'Sem conexão com o Firebase. Confira a internet e tente de novo.',
+      'auth/too-many-requests':
+        'Muitas tentativas seguidas. Espere alguns minutos e tente de novo.'
+    };
+
+    if (mapa[codigo]) return mapa[codigo];
+    return `Erro ao cadastrar funcionário (${codigo || 'sem código'}): ${e.message}`;
+  }
+
+  /**
+   * Garante que exista um montador com este e-mail no painel de montadores.
+   * É esse vínculo que faz o funcionário abrir o app e ver só as montagens
+   * dele, com o valor que ele recebe em vez do valor cheio do cliente.
+   */
+  vincularMontador(nome, email) {
+    if (!window.storageManager) return;
+
+    const assemblers = window.storageManager.getAssemblers();
+    const alvo = String(email || '').toLowerCase();
+    const existente = assemblers.find(a => String(a.email || '').toLowerCase() === alvo);
+
+    if (existente) {
+      if (!existente.name && nome) existente.name = nome;
+      window.storageManager.saveAssemblers(assemblers);
+      return;
+    }
+
+    // Mesmo nome já cadastrado sem e-mail? Aproveita o cadastro e só amarra o login.
+    const porNome = assemblers.find(
+      a => !a.email && String(a.name || '').trim().toLowerCase() === String(nome || '').trim().toLowerCase()
+    );
+    if (porNome) {
+      porNome.email = email;
+      window.storageManager.saveAssemblers(assemblers);
+      return;
+    }
+
+    assemblers.push({
+      id: 'a_' + Date.now(),
+      name: nome,
+      email,
+      phone: '',
+      isOwner: false,
+      createdAt: new Date().toISOString()
+    });
+    window.storageManager.saveAssemblers(assemblers);
+
+    if (window.assemblersController) window.assemblersController.render();
+  }
+
+  /* ---------- Quem está usando o app agora ---------- */
+
+  /** Id do montador ligado ao login atual, ou null se não houver vínculo. */
+  getCurrentAssemblerId() {
+    if (!this.currentUser || !window.storageManager) return null;
+    const email = String(this.currentUser.email || '').toLowerCase();
+    const encontrado = (window.storageManager.getAssemblers() || [])
+      .find(a => String(a.email || '').toLowerCase() === email);
+    return encontrado ? encontrado.id : null;
+  }
+
+  /** Admin vê o dinheiro todo: valor cobrado, material e lucro. */
+  podeVerValoresCheios() {
+    return !!this.isAdmin;
+  }
+
+  /** O serviço é deste montador? Define o que ele pode ver de valor. */
+  servicoEhMeu(service) {
+    const meuId = this.getCurrentAssemblerId();
+    return !!(meuId && service && service.assemblerId === meuId);
   }
 
   async loadTeamMembers() {

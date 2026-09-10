@@ -46,8 +46,10 @@ class StoresController {
     const monthPrefix = Utils.currentMonthPrefix();
     const yearPrefix = String(new Date().getFullYear());
 
-    return window.storageManager.getServices()
-      .filter(s => s.storeId === storeId && s.status !== 'cancelado')
+    // Índice pronto por loja: antes cada uma das lojas varria a lista inteira
+    // de serviços dentro do laço que desenha a tela.
+    return window.storageManager.servicesOf('storeId', storeId)
+      .filter(s => s.status !== 'cancelado')
       .filter(s => {
         const date = s.date || '';
         if (this.periodFilter === 'month') return date.startsWith(monthPrefix);

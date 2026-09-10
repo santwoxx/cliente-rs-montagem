@@ -46,8 +46,8 @@ class AssemblersController {
     const monthPrefix = Utils.currentMonthPrefix();
     const yearPrefix = String(new Date().getFullYear());
 
-    return window.storageManager.getServices()
-      .filter(s => s.assemblerId === assemblerId)
+    // Índice pronto por montador, em vez de varrer todos os serviços por linha.
+    return window.storageManager.servicesOf('assemblerId', assemblerId)
       .filter(s => {
         const date = s.date || '';
         if (this.periodFilter === 'month') return date.startsWith(monthPrefix);
@@ -87,6 +87,7 @@ class AssemblersController {
       if (a) {
         document.getElementById('assembler-name').value = a.name || '';
         document.getElementById('assembler-phone').value = a.phone || '';
+        document.getElementById('assembler-email').value = a.email || '';
         document.getElementById('assembler-is-owner').checked = !!a.isOwner;
       }
     } else if (title) {
@@ -99,6 +100,7 @@ class AssemblersController {
   handleFormSubmit() {
     const name = document.getElementById('assembler-name').value.trim();
     const phone = document.getElementById('assembler-phone').value.trim();
+    const email = document.getElementById('assembler-email').value.trim().toLowerCase();
     const isOwner = document.getElementById('assembler-is-owner').checked;
 
     if (!name) {
@@ -119,7 +121,7 @@ class AssemblersController {
       const idx = assemblers.findIndex(a => a.id === this.currentEditingId);
       if (idx !== -1) {
         const previousName = assemblers[idx].name;
-        assemblers[idx] = { ...assemblers[idx], name, phone, isOwner };
+        assemblers[idx] = { ...assemblers[idx], name, phone, email, isOwner };
         window.storageManager.saveAssemblers(assemblers);
 
         // Mantém o nome gravado nos serviços em sincronia com o cadastro.
@@ -140,7 +142,7 @@ class AssemblersController {
     } else {
       assemblers.push({
         id: 'a_' + Date.now(),
-        name, phone, isOwner,
+        name, phone, email, isOwner,
         createdAt: new Date().toISOString()
       });
       window.storageManager.saveAssemblers(assemblers);

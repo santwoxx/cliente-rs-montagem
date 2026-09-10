@@ -7,6 +7,14 @@
   <meta name="theme-color" content="#FF5E1E">
   <title>RS Montagens | Sistema do Montador de Móveis</title>
 
+  <!-- PWA: é isto que permite instalar o app na tela inicial do Android -->
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="RS Montagens">
+
   <!-- Ícone da aba (SVG embutido: sem requisição extra e sem 404 de favicon) -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23FF5E1E'/><text x='50' y='68' font-family='Segoe UI,Arial,sans-serif' font-size='52' font-weight='bold' fill='white' text-anchor='middle'>RS</text></svg>">
 
@@ -25,6 +33,7 @@
   <link rel="stylesheet" href="css/detail.css">
   <link rel="stylesheet" href="css/modules.css">
   <link rel="stylesheet" href="css/responsive.css">
+  <link rel="stylesheet" href="css/extras.css">
   <link rel="stylesheet" href="css/print.css">
 
   <!-- Firebase SDK v10 (compat mode) -->
@@ -34,6 +43,9 @@
 
   <!-- Chart.js via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <!-- html2pdf: gera o arquivo PDF da nota sem depender da tela de impressão -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
 </head>
 <body>
 
@@ -738,12 +750,93 @@
                 </div>
               </div>
 
+              <!-- Instalar o app na tela inicial -->
+              <div class="card" style="margin-bottom: 24px;">
+                <div class="card-header">
+                  <h3 class="card-title"><i class="fa-solid fa-mobile-screen-button"></i> App no celular</h3>
+                </div>
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 14px;">
+                  Instalado, o sistema abre pelo ícone RS na tela inicial, sem barra de navegador,
+                  e continua funcionando quando a internet cai no meio de uma montagem.
+                </p>
+                <p style="font-size: 0.86rem; margin-bottom: 16px;" id="pwa-status-texto">
+                  Verificando&hellip;
+                </p>
+                <button class="btn btn-primary" id="btn-instalar-app">
+                  <i class="fa-solid fa-download"></i> Instalar na tela inicial
+                </button>
+              </div>
+
+              <!-- Notificações -->
+              <div class="card" style="margin-bottom: 24px;">
+                <div class="card-header">
+                  <h3 class="card-title"><i class="fa-solid fa-bell"></i> Notificações</h3>
+                </div>
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 14px;">
+                  Um resumo de manhã com as montagens do dia e um aviso antes de cada uma.
+                </p>
+                <p style="font-size: 0.86rem; margin-bottom: 16px;" id="notif-status">Verificando&hellip;</p>
+
+                <button class="btn btn-primary" id="btn-ativar-notificacoes" style="margin-bottom: 12px;">
+                  <i class="fa-solid fa-bell"></i> Ligar notificações
+                </button>
+
+                <div id="notif-configuracoes" style="display: none;">
+                  <label class="checkbox-row" style="margin-bottom: 10px;">
+                    <input type="checkbox" id="notif-chk-resumo" checked>
+                    <span>Resumo das montagens de manhã</span>
+                  </label>
+                  <div class="form-group">
+                    <label class="form-label">Horário do resumo</label>
+                    <input type="time" id="notif-hora-resumo" class="form-control" value="07:00">
+                  </div>
+
+                  <label class="checkbox-row" style="margin: 14px 0 10px;">
+                    <input type="checkbox" id="notif-chk-lembrete" checked>
+                    <span>Aviso antes de cada montagem</span>
+                  </label>
+                  <div class="form-group">
+                    <label class="form-label">Antecedência</label>
+                    <select id="notif-antecedencia" class="form-control">
+                      <option value="15">15 minutos antes</option>
+                      <option value="30" selected>30 minutos antes</option>
+                      <option value="45">45 minutos antes</option>
+                      <option value="60">1 hora antes</option>
+                      <option value="90">1 hora e meia antes</option>
+                      <option value="120">2 horas antes</option>
+                    </select>
+                  </div>
+
+                  <div class="notif-aviso">
+                    <i class="fa-solid fa-circle-info"></i>
+                    <span>
+                      Quem conta o tempo é o próprio app. Deixe o RS Montagens instalado e
+                      evite fechá-lo pela lista de apps recentes — se o Android encerrar o
+                      app de vez, o aviso daquele horário não sai. O resumo do dia é
+                      recuperado na próxima abertura.
+                    </span>
+                  </div>
+
+                  <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-top: 14px;">
+                    <button class="btn btn-outline btn-sm" id="btn-testar-notificacao">
+                      <i class="fa-solid fa-vial"></i> Ver como chega
+                    </button>
+                    <button class="btn btn-outline btn-sm" id="btn-desativar-notificacoes">
+                      <i class="fa-solid fa-bell-slash" style="color: var(--danger);"></i> Desligar
+                    </button>
+                  </div>
+                </div>
+              </div>
+
               <div class="card" style="margin-bottom: 24px;">
                 <div class="card-header">
                   <h3 class="card-title"><i class="fa-solid fa-cloud-arrow-up"></i> Backup e Segurança</h3>
                 </div>
-                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 16px;">
+                <p style="font-size: 0.88rem; color: var(--text-muted); margin-bottom: 12px;">
                   Seus dados ficam armazenados com segurança neste dispositivo. Recomendamos fazer o download do backup regularmente para não perder seus agendamentos e histórico financeiro caso troque de aparelho.
+                </p>
+                <p style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 16px;" id="uso-memoria">
+                  &nbsp;
                 </p>
                 <div style="display: flex; flex-direction: column; gap: 12px;">
                   <button class="btn btn-primary" id="btn-export-backup">
@@ -1000,6 +1093,60 @@
               <div class="profit-preview" id="service-profit-preview">R$ 0,00</div>
               <small class="form-hint">Total &minus; gastos. Calculado automaticamente.</small>
             </div>
+          </div>
+
+          <!-- Repasse ao montador: só o administrador define e enxerga -->
+          <div data-admin-only="true">
+            <div class="settings-section-label">
+              <i class="fa-solid fa-helmet-safety" style="color: var(--primary);"></i> Pagamento do montador
+              <small>O montador que executar vê só este valor, nunca o valor cheio do cliente.</small>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label class="form-label">Quanto o montador recebe (R$)</label>
+                <input type="number" id="service-assembler-pay" class="form-control" step="1" min="0"
+                       placeholder="0" inputmode="numeric" value="0">
+                <div class="pay-chips" id="service-pay-chips">
+                  <button type="button" class="pay-chip" data-pay-percent="30">30%</button>
+                  <button type="button" class="pay-chip" data-pay-percent="40">40%</button>
+                  <button type="button" class="pay-chip" data-pay-percent="50">50%</button>
+                  <button type="button" class="pay-chip" data-pay-percent="60">60%</button>
+                  <button type="button" class="pay-chip" data-pay-percent="70">70%</button>
+                  <button type="button" class="pay-chip pay-chip-zero" data-pay-percent="0">Zerar</button>
+                </div>
+                <small class="form-hint">
+                  As porcentagens são só atalho: o valor entra sempre arredondado, sem centavos quebrados.
+                </small>
+              </div>
+              <div class="form-group">
+                <label class="form-label">Sobra para você</label>
+                <div class="profit-preview" id="service-owner-preview">R$ 0,00</div>
+                <small class="form-hint">Total &minus; material &minus; pagamento do montador.</small>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fotos do móvel mandadas pelo cliente -->
+          <div class="settings-section-label">
+            <i class="fa-solid fa-camera" style="color: var(--primary);"></i> Fotos do móvel
+            <small>Ficam guardadas aqui no serviço — dá para limpar a galeria do celular.</small>
+          </div>
+          <div class="form-group">
+            <div class="foto-acoes">
+              <label class="btn btn-outline btn-sm" style="cursor: pointer;">
+                <i class="fa-solid fa-image"></i> Escolher da galeria
+                <input type="file" id="service-fotos-galeria" accept="image/*" multiple style="display: none;">
+              </label>
+              <label class="btn btn-outline btn-sm" style="cursor: pointer;">
+                <i class="fa-solid fa-camera"></i> Tirar foto
+                <input type="file" id="service-fotos-camera" accept="image/*" capture="environment" style="display: none;">
+              </label>
+              <span class="foto-contador" id="service-fotos-contador">0 de 6</span>
+            </div>
+            <div id="service-fotos-preview"></div>
+            <small class="form-hint" id="service-fotos-aviso">
+              Até 6 fotos por serviço. Elas são reduzidas automaticamente para não pesar.
+            </small>
           </div>
 
           <div class="form-row">
@@ -1273,6 +1420,15 @@
             <label class="form-label">WhatsApp</label>
             <input type="text" id="assembler-phone" class="form-control" placeholder="(11) 99999-9999">
           </div>
+          <div class="form-group">
+            <label class="form-label">E-mail de login deste montador</label>
+            <input type="email" id="assembler-email" class="form-control" placeholder="lucas@exemplo.com">
+            <small class="form-hint">
+              Precisa ser o mesmo e-mail cadastrado em Ajustes &rsaquo; Gestão da Equipe.
+              É por ele que o sistema sabe quais montagens são deste montador e
+              mostra a ele só o valor que ele recebe.
+            </small>
+          </div>
           <label class="checkbox-row">
             <input type="checkbox" id="assembler-is-owner">
             <span>Sou eu (dono da empresa que também executa montagens)</span>
@@ -1300,8 +1456,11 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-outline" data-modal-close>Fechar</button>
-        <button type="button" class="btn btn-primary" onclick="window.print()">
-          <i class="fa-solid fa-print"></i> Gerar PDF
+        <button type="button" class="btn btn-outline" id="btn-imprimir-nota" title="Abrir a tela de impressão do sistema">
+          <i class="fa-solid fa-print"></i> Imprimir
+        </button>
+        <button type="button" class="btn btn-primary" id="btn-baixar-pdf">
+          <i class="fa-solid fa-file-pdf"></i> Baixar PDF
         </button>
         <button type="button" class="btn btn-whatsapp" id="btn-send-receipt-whatsapp">
           <i class="fa-brands fa-whatsapp"></i> Enviar nota ao cliente
@@ -1421,6 +1580,7 @@
   <script src="js/license.js"></script>
   <script src="js/utils.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/photos.js"></script>
   <script src="js/calendar.js"></script>
   <script src="js/services.js"></script>
   <script src="js/finance.js"></script>
@@ -1428,6 +1588,8 @@
   <script src="js/stores.js"></script>
   <script src="js/assemblers.js"></script>
   <script src="js/quotes.js"></script>
+  <script src="js/notifications.js"></script>
+  <script src="js/pwa.js"></script>
   <script src="js/app.js"></script>
 </body>
 </html>

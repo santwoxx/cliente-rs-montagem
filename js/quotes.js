@@ -62,6 +62,129 @@ class QuotesController {
     if (sendReceiptBtn) {
       sendReceiptBtn.addEventListener('click', () => this.sendCurrentReceipt());
     }
+
+    // Gera o arquivo PDF da nota
+    const pdfBtn = document.getElementById('btn-baixar-pdf');
+    if (pdfBtn) pdfBtn.addEventListener('click', () => this.gerarPDF());
+
+    // Impressão continua disponível como alternativa
+    const printBtn = document.getElementById('btn-imprimir-nota');
+    if (printBtn) printBtn.addEventListener('click', () => window.print());
+  }
+
+  /* ---------- PDF da nota ---------- */
+
+  /** Nome do arquivo a partir do que está na nota aberta. */
+  nomeDoArquivoPDF() {
+    const ctx = this.currentReceiptContext;
+    const limpar = (t) => String(t || '')
+      .normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-zA-Z0-9]+/g, '-')
+      .replace(/^-|-$/g, '')
+      .slice(0, 40);
+
+    if (ctx && ctx.type === 'service') {
+      const s = window.storageManager.getServices().find(item => item.id === ctx.id);
+      if (s) return `nota-${limpar(s.clientName)}-${s.date || Utils.todayISO()}.pdf`;
+    }
+    if (ctx && ctx.type === 'store') {
+      const loja = window.storageManager.getStores().find(item => item.id === ctx.id);
+      if (loja) return `nota-${limpar(loja.name)}-${Utils.todayISO()}.pdf`;
+    }
+    return `nota-de-servico-${Utils.todayISO()}.pdf`;
+  }
+
+  /**
+   * Monta o PDF a partir da nota que está na tela.
+   * Antes isto era window.print(), que no celular abre a tela de impressão do
+   * Android e nem sempre chega a um arquivo. Agora o arquivo é gerado aqui:
+   * no Android cai no menu de compartilhar (dá para mandar no WhatsApp na hora),
+   * e onde isso não existir vira download normal.
+   */
+  async gerarPDF() {
+    const nota = document.querySelector('#receipt-modal-body .printable-receipt');
+    if (!nota) {
+      window.app.showToast('Abra uma nota antes de gerar o PDF.', 'warning');
+      return;
+    }
+
+    // Biblioteca não carregou (offline na primeira vez): volta para a impressão.
+    if (typeof html2pdf === 'undefined') {
+      window.app.showToast('Gerador de PDF indisponível. Abrindo a impressão.', 'warning');
+      window.print();
+      return;
+    }
+
+    const btn = document.getElementById('btn-baixar-pdf');
+    const rotuloOriginal = btn ? btn.innerHTML : '';
+    if (btn) {
+      btn.disabled = true;
+      btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Gerando...';
+    }
+
+    const nomeArquivo = this.nomeDoArquivoPDF();
+
+    try {
+      const blob = await html2pdf()
+        .set({
+          margin: [8, 8, 8, 8],
+          filename: nomeArquivo,
+          image: { type: 'jpeg', quality: 0.95 },
+          html2canvas: {
+            scale: 2,
+            useCORS: true,
+            backgroundColor: '#FFFFFF',
+            // A nota rola dentro do modal; sem isto o PDF sai cortado.
+            scrollY: 0,
+            windowWidth: nota.scrollWidth
+          },
+          jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+          pagebreak: { mode: ['avoid-all', 'css'] }
+        })
+        .from(nota)
+        .outputPdf('blob');
+
+      await this.entregarPDF(blob, nomeArquivo);
+    } catch (e) {
+      console.error('[pdf] falhou:', e);
+      window.app.showToast('Não consegui gerar o PDF. Abrindo a impressão.', 'danger');
+      window.print();
+    } finally {
+      if (btn) {
+        btn.disabled = false;
+        btn.innerHTML = rotuloOriginal;
+      }
+    }
+  }
+
+  /** Compartilha no Android quando dá; se não, baixa o arquivo. */
+  async entregarPDF(blob, nomeArquivo) {
+    const arquivo = new File([blob], nomeArquivo, { type: 'application/pdf' });
+
+    if (navigator.canShare && navigator.canShare({ files: [arquivo] })) {
+      try {
+        await navigator.share({
+          files: [arquivo],
+          title: 'Nota de Serviço',
+          text: 'Segue a nota de serviço.'
+        });
+        return;
+      } catch (e) {
+        // Cancelou o menu de compartilhar: não é erro, só cai no download.
+        if (e && e.name === 'AbortError') return;
+      }
+    }
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = nomeArquivo;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+    window.app.showToast('PDF salvo em Downloads.', 'success');
   }
 
   renderCatalog() {

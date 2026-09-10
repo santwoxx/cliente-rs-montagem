@@ -316,7 +316,27 @@ const SEED_ASSEMBLERS = [
 
 class StorageManager {
   constructor() {
+    // Cópia já interpretada dos dados. Sem ela cada leitura refazia o
+    // JSON.parse da base inteira, e uma única atualização de tela chegava a
+    // fazer 174 dessas — era o que travava o celular.
+    this.cache = {};
+
+    // Serviços agrupados por loja, montador, cliente e data. Evita varrer os
+    // 900 serviços uma vez por linha da lista.
+    this.indices = {};
+
+    // Escrita na nuvem agrupada: várias alterações seguidas viram um envio só.
+    this.pendentesNuvem = {};
+    this.timerNuvem = null;
+    this.ATRASO_NUVEM_MS = 2500;
+
+    // Documento do Firestore trava em 1 MB. Avisamos em 750 KB para dar tempo
+    // de agir antes de a nuvem começar a recusar a gravação.
+    this.LIMITE_ALERTA_BYTES = 750 * 1024;
+    this.avisosDeTamanho = new Set();
+
     this.init();
+    this.protegerContraFechamento();
   }
 
   init() {
@@ -416,23 +436,67 @@ class StorageManager {
   }
 
   get(key) {
+    if (Object.prototype.hasOwnProperty.call(this.cache, key)) {
+      return this.cache[key];
+    }
+
     try {
       const data = localStorage.getItem(key);
-      return data ? JSON.parse(data) : null;
+      const interpretado = data ? JSON.parse(data) : null;
+      this.cache[key] = interpretado;
+      return interpretado;
     } catch (e) {
       console.error(`Erro ao ler ${key}:`, e);
+      this.cache[key] = null;
       return null;
     }
   }
 
   save(key, data) {
+    // A memória é a fonte da verdade durante a sessão; o localStorage é a cópia.
+    this.cache[key] = data;
+    if (key === STORAGE_KEYS.SERVICES) this.indices = {};
+
     try {
       localStorage.setItem(key, JSON.stringify(data));
       return true;
     } catch (e) {
       console.error(`Erro ao salvar ${key}:`, e);
+      if (window.app && e.name === 'QuotaExceededError') {
+        window.app.showToast(
+          'Memória do navegador cheia. Apague fotos de serviços antigos.',
+          'danger'
+        );
+      }
       return false;
     }
+  }
+
+  /**
+   * Serviços agrupados por um campo ('storeId', 'assemblerId', 'clientId'...).
+   * Antes cada loja e cada montador varria a lista inteira de serviços dentro
+   * do próprio laço de renderização — 60 lojas x 900 serviços por tela.
+   * O índice é montado uma vez e jogado fora quando os serviços mudam.
+   */
+  servicesIndexedBy(campo) {
+    if (this.indices[campo]) return this.indices[campo];
+
+    const mapa = new Map();
+    (this.getServices() || []).forEach(s => {
+      const chave = s[campo];
+      if (chave === undefined || chave === null || chave === '') return;
+      const lista = mapa.get(chave);
+      if (lista) lista.push(s);
+      else mapa.set(chave, [s]);
+    });
+
+    this.indices[campo] = mapa;
+    return mapa;
+  }
+
+  /** Atalho: lista (nunca nula) de serviços de uma chave. */
+  servicesOf(campo, valor) {
+    return this.servicesIndexedBy(campo).get(valor) || [];
   }
 
   // Entities Accessors com Sincronização Cloud Firestore
@@ -497,17 +561,123 @@ class StorageManager {
   }
 
   // Cloud Firestore Sync Helpers
-  async syncToFirestore(collectionKey, data) {
+
+  /**
+   * Agenda o envio em vez de disparar na hora.
+   *
+   * Concluir uma montagem grava serviço + receita + despesa de material +
+   * repasse do montador: eram 4 gravações na nuvem em menos de um segundo,
+   * cada uma subindo a base inteira. Agora as alterações se acumulam por
+   * alguns segundos e sobem de uma vez — menos espera no celular e menos
+   * operações contra a cota gratuita do Firebase.
+   */
+  syncToFirestore(collectionKey, data) {
     if (!window.firestoreDb || !window.firebaseAuth || !window.firebaseAuth.currentUser) return;
-    try {
-      await window.firestoreDb.collection('app_data').doc(collectionKey).set({
-        data,
-        updatedAt: new Date().toISOString(),
-        updatedBy: window.firebaseAuth.currentUser.email
-      }, { merge: true });
-    } catch (e) {
-      console.warn(`Aviso: salvando localmente. Erro ao sincronizar ${collectionKey} no Firestore:`, e.message);
+
+    this.pendentesNuvem[collectionKey] = data;
+
+    if (this.timerNuvem) clearTimeout(this.timerNuvem);
+    this.timerNuvem = setTimeout(() => this.enviarPendentes(), this.ATRASO_NUVEM_MS);
+  }
+
+  async enviarPendentes() {
+    if (this.timerNuvem) {
+      clearTimeout(this.timerNuvem);
+      this.timerNuvem = null;
     }
+
+    const aEnviar = this.pendentesNuvem;
+    this.pendentesNuvem = {};
+
+    const chaves = Object.keys(aEnviar);
+    if (chaves.length === 0) return;
+    if (!window.firestoreDb || !window.firebaseAuth || !window.firebaseAuth.currentUser) return;
+
+    const quem = window.firebaseAuth.currentUser.email;
+    const quando = new Date().toISOString();
+
+    await Promise.all(chaves.map(async (collectionKey) => {
+      try {
+        const corpo = JSON.stringify(aEnviar[collectionKey]);
+
+        // Cada coleção inteira vive num documento só, e documento do Firestore
+        // para de aceitar gravação em 1 MB. Sem esta checagem a sincronização
+        // simplesmente pararia um dia, sem aviso, e o montador só descobriria
+        // ao trocar de celular e não achar os dados.
+        if (corpo.length > this.LIMITE_ALERTA_BYTES) {
+          this.avisarBaseGrande(collectionKey, corpo.length);
+        }
+
+        await window.firestoreDb.collection('app_data').doc(collectionKey).set({
+          data: aEnviar[collectionKey],
+          updatedAt: quando,
+          updatedBy: quem
+        }, { merge: true });
+      } catch (e) {
+        console.warn(`Aviso: salvo no aparelho, mas falhou ao sincronizar ${collectionKey}:`, e.message);
+        // Devolve para a fila para tentar de novo na próxima alteração.
+        if (this.pendentesNuvem[collectionKey] === undefined) {
+          this.pendentesNuvem[collectionKey] = aEnviar[collectionKey];
+        }
+      }
+    }));
+  }
+
+  /** Avisa uma vez por sessão, sem transformar o alerta em incômodo. */
+  avisarBaseGrande(collectionKey, bytes) {
+    if (this.avisosDeTamanho.has(collectionKey)) return;
+    this.avisosDeTamanho.add(collectionKey);
+
+    const kb = Math.round(bytes / 1024);
+    console.warn(`[nuvem] "${collectionKey}" está em ${kb} KB; o limite do Firestore é 1024 KB.`);
+
+    if (window.app) {
+      window.app.showToast(
+        `Sua base de ${collectionKey} está em ${kb} KB e o limite da nuvem é 1024 KB. ` +
+        'Faça o backup e arquive os serviços mais antigos.',
+        'warning'
+      );
+    }
+  }
+
+  /** Quanto o app ocupa neste aparelho, em KB, por chave. */
+  usoDeMemoria() {
+    let total = 0;
+    let fotos = 0;
+    let gruposDeFotos = 0;
+
+    for (let i = 0; i < localStorage.length; i++) {
+      const chave = localStorage.key(i);
+      if (!chave) continue;
+      const tamanho = (localStorage.getItem(chave) || '').length;
+      total += tamanho;
+      if (chave.startsWith('movelpro_fotos_')) {
+        fotos += tamanho;
+        gruposDeFotos++;
+      }
+    }
+
+    return {
+      totalKB: Math.round(total / 1024),
+      fotosKB: Math.round(fotos / 1024),
+      gruposDeFotos
+    };
+  }
+
+  /**
+   * Fechar o app com envio pendente não pode perder dado.
+   * O 'pagehide' é o único evento confiável no Chrome do Android — 'unload'
+   * não dispara quando o app volta pela lista de recentes.
+   */
+  protegerContraFechamento() {
+    const despejar = () => {
+      if (Object.keys(this.pendentesNuvem).length > 0) this.enviarPendentes();
+    };
+
+    window.addEventListener('pagehide', despejar);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') despejar();
+    });
   }
 
   async syncFromFirestore() {

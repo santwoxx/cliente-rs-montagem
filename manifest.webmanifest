@@ -1,0 +1,66 @@
+{
+  "id": "/",
+  "name": "RS Montagens | Sistema do Montador",
+  "short_name": "RS Montagens",
+  "description": "Agenda, clientes, orçamentos e controle financeiro para montadores de móveis.",
+  "lang": "pt-BR",
+  "dir": "ltr",
+  "start_url": "/?fonte=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui"],
+  "orientation": "portrait",
+  "background_color": "#F8FAFC",
+  "theme_color": "#FF5E1E",
+  "categories": ["business", "productivity", "finance"],
+  "prefer_related_applications": false,
+  "icons": [
+    {
+      "src": "/icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/icons/icon-maskable-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/icons/icon-maskable-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Nova Montagem",
+      "short_name": "Agendar",
+      "description": "Abre direto o formulário de novo serviço",
+      "url": "/?acao=novo-servico",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Agenda de Hoje",
+      "short_name": "Agenda",
+      "description": "Vai direto para a agenda",
+      "url": "/?acao=agenda",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Novo Cliente",
+      "short_name": "Cliente",
+      "description": "Cadastra um cliente novo",
+      "url": "/?acao=novo-cliente",
+      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+    }
+  ]
+}

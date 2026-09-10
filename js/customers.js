@@ -163,8 +163,14 @@ class CustomersController {
 
   /** Todos os serviços do cliente, do mais recente para o mais antigo. */
   getCustomerServices(customer) {
-    return window.storageManager.getServices()
-      .filter(s => s.clientId === customer.id || s.clientName === customer.name)
+    // Serviços antigos foram gravados só com o nome do cliente, sem id;
+    // por isso as duas chaves precisam ser consultadas.
+    const porId = window.storageManager.servicesOf('clientId', customer.id);
+    const porNome = window.storageManager.servicesOf('clientName', customer.name);
+
+    const vistos = new Set();
+    return porId.concat(porNome)
+      .filter(s => (vistos.has(s.id) ? false : vistos.add(s.id)))
       .sort((a, b) => String(b.date).localeCompare(String(a.date)));
   }
 
@@ -301,7 +307,6 @@ class CustomersController {
     if (!container) return;
 
     let customers = window.storageManager.getCustomers();
-    const services = window.storageManager.getServices();
 
     if (this.searchQuery) {
       customers = customers.filter(c => 
@@ -328,8 +333,8 @@ class CustomersController {
     }
 
     container.innerHTML = customers.map(c => {
-      // Calculate customer stats
-      const clientServices = services.filter(s => s.clientId === c.id || s.clientName === c.name);
+      // Índice em vez de varrer todos os serviços por linha da lista.
+      const clientServices = this.getCustomerServices(c);
       const totalSpent = clientServices
         .filter(s => s.paymentStatus === 'pago')
         .reduce((sum, s) => sum + Utils.serviceTotal(s), 0);

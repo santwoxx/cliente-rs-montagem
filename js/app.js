@@ -6,6 +6,22 @@
 class App {
   constructor() {
     this.currentView = 'view-agenda'; // Start directly in Agenda or Dashboard
+
+    // Como cada tela se redesenha. Só é chamado para a tela que está à vista.
+    this.RENDERIZADORES = {
+      'view-inicio': () => this.updateDashboardKPIs(),
+      'view-agenda': () => {
+        window.calendarController.render();
+        window.calendarController.renderDayServices(window.calendarController.selectedDate);
+      },
+      'view-financeiro': () => window.financeController.render(),
+      'view-clientes': () => window.customersController.render(),
+      'view-montadores': () => window.assemblersController.render(),
+      'view-lojas': () => window.storesController.render()
+    };
+
+    // Telas que mudaram e ainda não foram redesenhadas.
+    this.viewsDesatualizadas = new Set();
   }
 
   init() {
@@ -28,6 +44,12 @@ class App {
     window.storesController.init();
     window.assemblersController.init();
     window.quotesController.init();
+    window.notificationsController.init();
+    window.pwaController.init();
+
+    // Fotos de agendamentos que nunca chegaram a ser salvos não podem
+    // ficar ocupando a memória do celular.
+    window.photoStore.limparOrfas();
 
     // Default start view is Agenda (matching user's screenshot) or Início
     this.navigateTo('view-agenda');
@@ -75,16 +97,25 @@ class App {
     // Scroll to top
     window.scrollTo({ top: 0, behavior: 'smooth' });
 
-    // Recarrega a tela de destino com os dados mais recentes
-    if (viewId === 'view-financeiro') {
-      window.financeController.render();
-    } else if (viewId === 'view-inicio') {
-      this.updateDashboardKPIs();
-    } else if (viewId === 'view-montadores') {
-      window.assemblersController.render();
-    } else if (viewId === 'view-lojas') {
-      window.storesController.render();
+    // Recarrega a tela de destino só se ela ficou desatualizada.
+    this.renderViewSeNecessario(viewId);
+
+    if (viewId === 'view-ajustes') this.renderUsoDeMemoria();
+  }
+
+  /** Mostra em Ajustes quanto o app já ocupa no aparelho. */
+  renderUsoDeMemoria() {
+    const el = document.getElementById('uso-memoria');
+    if (!el) return;
+
+    const uso = window.storageManager.usoDeMemoria();
+    const partes = [`<i class="fa-solid fa-database"></i> Ocupando <strong>${uso.totalKB} KB</strong> neste aparelho`];
+
+    if (uso.gruposDeFotos > 0) {
+      partes.push(`${uso.fotosKB} KB são fotos de ${uso.gruposDeFotos} serviço(s)`);
     }
+
+    el.innerHTML = partes.join(' &bull; ');
   }
 
   updateHeaderTitle(viewId) {
@@ -278,13 +309,31 @@ class App {
     }
   }
 
+  /**
+   * Chamado depois de qualquer alteração nos dados.
+   *
+   * Antes redesenhava as seis telas de uma vez, inclusive as que estavam
+   * escondidas: ~470 ms de tela congelada a cada montagem salva num celular
+   * mediano. Agora só a tela visível é refeita na hora; as outras ficam
+   * marcadas e se atualizam quando ele abrir cada uma.
+   */
   updateAllViews() {
+    // Os KPIs alimentam também a pílula do cabeçalho, que está sempre à vista.
     this.updateDashboardKPIs();
-    window.calendarController.render();
-    window.financeController.render();
-    window.customersController.render();
-    window.storesController.render();
-    window.assemblersController.render();
+
+    this.viewsDesatualizadas = new Set(Object.keys(this.RENDERIZADORES));
+    this.viewsDesatualizadas.delete('view-inicio'); // acabou de ser recalculado
+
+    this.renderViewSeNecessario(this.currentView);
+  }
+
+  /** Redesenha a tela só se ela ficou para trás. */
+  renderViewSeNecessario(viewId) {
+    if (!this.viewsDesatualizadas.has(viewId)) return;
+    this.viewsDesatualizadas.delete(viewId);
+
+    const renderizar = this.RENDERIZADORES[viewId];
+    if (renderizar) renderizar();
   }
 
   /* ---------- Tema claro / escuro ---------- */
