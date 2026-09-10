@@ -344,44 +344,96 @@
    transform, sem rolagem, sem altura máxima e sempre em papel branco.
    -------------------------------------------------------------------------- */
 .pdf-export-stage {
-  position: absolute;
-  top: 0;
-  left: -20000px;
-  width: 760px;
-  padding: 0;
-  margin: 0;
-  background: #FFFFFF;
-  color: #0F172A;
-  /* O tema escuro não pode vazar para o papel. */
-  color-scheme: light;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 190mm !important;
+  max-width: 190mm !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  box-sizing: border-box !important;
+  z-index: -9999 !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  color-scheme: light !important;
 }
 
 .pdf-export-stage .printable-receipt {
-  width: 760px;
-  max-width: none;
-  min-height: 0;
-  max-height: none;
-  margin: 0;
-  overflow: visible;
-  transform: none;
-  box-shadow: none;
-  border: 1px solid #E2E8F0;
-  border-radius: 10px;
-  padding: 30px 32px;
-  background: #FFFFFF;
-  color: #0F172A;
+  width: 100% !important;
+  max-width: 100% !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  margin: 0 !important;
+  overflow: visible !important;
+  transform: none !important;
+  box-shadow: none !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 8px !important;
+  padding: 24px 28px !important;
+  box-sizing: border-box !important;
+  background: #FFFFFF !important;
+  color: #0F172A !important;
 }
 
-/* Quebra de página não pode partir um bloco no meio. */
+/* Regras para o container gerado internamente pelo html2pdf */
+.html2pdf__overlay {
+  position: fixed !important;
+  left: 0 !important;
+  top: 0 !important;
+  width: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  overflow: visible !important;
+  background: transparent !important;
+}
+
+.html2pdf__container {
+  position: absolute !important;
+  left: 0 !important;
+  top: 0 !important;
+  right: auto !important;
+  bottom: auto !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  width: 190mm !important;
+  max-width: 190mm !important;
+  box-sizing: border-box !important;
+  background: #FFFFFF !important;
+}
+
+.html2pdf__container .printable-receipt {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  margin: 0 !important;
+  padding: 24px 28px !important;
+  box-sizing: border-box !important;
+  border: 1px solid #CBD5E1 !important;
+  border-radius: 8px !important;
+  background: #FFFFFF !important;
+  color: #0F172A !important;
+  transform: none !important;
+  box-shadow: none !important;
+  overflow: visible !important;
+}
+
+/* Quebra de página não pode partir um bloco no meio */
 .pdf-export-stage .receipt-block,
 .pdf-export-stage .receipt-header,
 .pdf-export-stage .receipt-signatures,
-.pdf-export-stage .receipt-table tr {
-  page-break-inside: avoid;
-  break-inside: avoid;
+.pdf-export-stage .receipt-table tr,
+.html2pdf__container .receipt-block,
+.html2pdf__container .receipt-header,
+.html2pdf__container .receipt-signatures,
+.html2pdf__container .receipt-table tr {
+  page-break-inside: avoid !important;
+  break-inside: avoid !important;
 }
 
-/* Assinaturas coladas no rodapé ficam apertadas no papel. */
-.pdf-export-stage .receipt-signatures {
-  margin-top: 48px;
+/* Assinaturas no rodapé do documento */
+.pdf-export-stage .receipt-signatures,
+.html2pdf__container .receipt-signatures {
+  margin-top: 36px !important;
 }

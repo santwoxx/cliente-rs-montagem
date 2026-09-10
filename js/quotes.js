@@ -134,17 +134,36 @@ class QuotesController {
         .set({
           margin: [10, 10, 10, 10],
           filename: nomeArquivo,
-          image: { type: 'jpeg', quality: 0.95 },
+          image: { type: 'jpeg', quality: 0.98 },
           html2canvas: {
             scale: 2,
             useCORS: true,
             backgroundColor: '#FFFFFF',
-            // O palco tem largura fixa e conhecida, então a captura é
-            // determinística: nada de herdar rolagem ou zoom da tela.
-            width: PDF_LARGURA_PALCO,
-            windowWidth: PDF_LARGURA_PALCO,
             scrollX: 0,
-            scrollY: 0
+            scrollY: 0,
+            x: 0,
+            y: 0,
+            onclone: (clonedDoc) => {
+              const container = clonedDoc.querySelector('.html2pdf__container');
+              if (container) {
+                container.style.position = 'absolute';
+                container.style.left = '0px';
+                container.style.top = '0px';
+                container.style.margin = '0px';
+                container.style.padding = '0px';
+                container.style.width = '190mm';
+                container.style.maxWidth = '190mm';
+                container.style.boxSizing = 'border-box';
+              }
+              const receipt = clonedDoc.querySelector('.printable-receipt');
+              if (receipt) {
+                receipt.style.width = '100%';
+                receipt.style.maxWidth = '100%';
+                receipt.style.margin = '0px';
+                receipt.style.boxSizing = 'border-box';
+                receipt.style.transform = 'none';
+              }
+            }
           },
           jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
           pagebreak: { mode: ['avoid-all', 'css'] }
