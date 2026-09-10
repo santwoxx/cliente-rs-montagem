@@ -11,6 +11,10 @@
    Para disparo garantido com o app fechado seria preciso push de servidor.
    ========================================================================== */
 
+// Preferência de notificação é por aparelho, não do negócio: fica fora do
+// documento de configurações que sincroniza entre o dono e a equipe.
+const NOTIF_CHAVE = 'rs_notificacoes';
+
 const NOTIF_PADRAO = {
   notifyEnabled: false,
   notifyDailyEnabled: true,
@@ -41,14 +45,45 @@ class NotificationsController {
 
   /* ---------- Configuração ---------- */
 
+  /** O montador não pode desligar os avisos — só o administrador. */
+  ehFuncionario() {
+    return !!(window.authController && window.authController.currentUser
+      && !window.authController.isAdmin);
+  }
+
+  /**
+   * A configuração vive só neste aparelho.
+   *
+   * Antes ficava junto das configurações do negócio, que são um documento
+   * único no Firestore — o montador mudar o horário do resumo mexia também no
+   * do dono, e vice-versa. Cada celular passa a ter o seu.
+   */
   config() {
-    const s = window.storageManager.getSettings();
-    return { ...NOTIF_PADRAO, ...s };
+    let salvo = {};
+    try {
+      salvo = JSON.parse(localStorage.getItem(NOTIF_CHAVE) || '{}');
+    } catch (e) { /* aparelho novo ou dado corrompido: usa o padrão */ }
+
+    const cfg = { ...NOTIF_PADRAO, ...salvo };
+
+    // Para o funcionário os avisos são obrigatórios: ainda que algo tenha
+    // gravado "desligado", o que vale aqui é ligado.
+    if (this.ehFuncionario()) {
+      cfg.notifyEnabled = true;
+      cfg.notifyDailyEnabled = true;
+      cfg.notifyReminderEnabled = true;
+    }
+
+    return cfg;
   }
 
   salvarConfig(mudancas) {
-    const atual = window.storageManager.getSettings();
-    window.storageManager.saveSettings({ ...atual, ...mudancas });
+    const atual = this.config();
+    try {
+      localStorage.setItem(NOTIF_CHAVE, JSON.stringify({ ...atual, ...mudancas }));
+    } catch (e) {
+      console.warn('[notif] não consegui salvar a preferência:', e.message);
+    }
   }
 
   suportado() {
@@ -376,8 +411,17 @@ class NotificationsController {
       return;
     }
 
+    const funcionario = this.ehFuncionario();
+
     if (Notification.permission === 'denied') {
-      status.innerHTML = '<i class="fa-solid fa-ban" style="color: var(--danger);"></i> Bloqueadas no navegador. Libere em Configurações do site &rsaquo; Notificações.';
+      // Bloqueio no navegador é a única saída que sobra para o montador, e
+      // nenhum site consegue reverter isso sozinho. Resta cobrar e ensinar.
+      status.innerHTML = funcionario
+        ? '<i class="fa-solid fa-triangle-exclamation" style="color: var(--danger);"></i> ' +
+          '<strong>Avisos bloqueados.</strong> Você vai perder o horário das montagens. ' +
+          'Libere em Configurações do site &rsaquo; Notificações e recarregue.'
+        : '<i class="fa-solid fa-ban" style="color: var(--danger);"></i> Bloqueadas no navegador. ' +
+          'Libere em Configurações do site &rsaquo; Notificações.';
       if (corpo) corpo.style.display = 'none';
       if (btnLigar) btnLigar.style.display = 'none';
       if (btnDesligar) btnDesligar.style.display = 'none';
@@ -385,13 +429,38 @@ class NotificationsController {
     }
 
     const ligado = this.ativo();
-    status.innerHTML = ligado
-      ? '<i class="fa-solid fa-circle-check" style="color: var(--success);"></i> Ligadas neste aparelho.'
-      : '<i class="fa-regular fa-bell-slash"></i> Desligadas.';
+
+    if (ligado) {
+      status.innerHTML = funcionario
+        ? '<i class="fa-solid fa-circle-check" style="color: var(--success);"></i> Ligadas — obrigatórias nesta conta.'
+        : '<i class="fa-solid fa-circle-check" style="color: var(--success);"></i> Ligadas neste aparelho.';
+    } else {
+      status.innerHTML = funcionario
+        ? '<i class="fa-solid fa-triangle-exclamation" style="color: var(--warning);"></i> ' +
+          'Falta liberar no aparelho. Toque no botão abaixo — é obrigatório para receber as montagens.'
+        : '<i class="fa-regular fa-bell-slash"></i> Desligadas.';
+    }
 
     if (corpo) corpo.style.display = ligado ? '' : 'none';
-    if (btnLigar) btnLigar.style.display = ligado ? 'none' : '';
-    if (btnDesligar) btnDesligar.style.display = ligado ? '' : 'none';
+    if (btnLigar) {
+      btnLigar.style.display = ligado ? 'none' : '';
+      btnLigar.innerHTML = funcionario
+        ? '<i class="fa-solid fa-bell"></i> Liberar avisos (obrigatório)'
+        : '<i class="fa-solid fa-bell"></i> Ligar notificações';
+    }
+    // Para o funcionário o botão de desligar já sai do ar por data-admin-only;
+    // esta linha não pode trazê-lo de volta.
+    if (btnDesligar && !funcionario) btnDesligar.style.display = ligado ? '' : 'none';
+  }
+
+  /**
+   * Chamado quando o login resolve: só aí dá para saber se quem entrou é o
+   * dono ou um montador, e os avisos do montador precisam subir sozinhos.
+   */
+  aoTrocarDeUsuario() {
+    if (this.ehFuncionario()) this.salvarConfig({ notifyEnabled: true });
+    if (this.ativo()) this.iniciarRelogio();
+    this.renderPainel();
   }
 }
 

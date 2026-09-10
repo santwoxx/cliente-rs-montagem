@@ -437,3 +437,33 @@
 .html2pdf__container .receipt-signatures {
   margin-top: 36px !important;
 }
+
+/* Recado de aviso obrigatório, na tela de Ajustes do montador. */
+.notif-obrigatoria {
+  display: flex;
+  gap: 10px;
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  font-size: 0.82rem;
+  line-height: 1.45;
+  color: var(--text-main);
+  background: var(--primary-light);
+  border: 1px solid rgba(255, 94, 30, 0.35);
+  border-radius: var(--radius-md);
+}
+
+.notif-obrigatoria i {
+  color: var(--primary);
+  margin-top: 2px;
+  flex-shrink: 0;
+}
+
+:root[data-theme="dark"] .notif-obrigatoria {
+  background: rgba(255, 94, 30, 0.12);
+}
+
+/* Com o perfil escondido do montador, a grade de Ajustes vira uma coluna só
+   em vez de deixar metade da tela vazia. */
+.ajustes-grid:has(> .card[data-admin-only="true"][style*="display: none"]) {
+  grid-template-columns: 1fr;
+}

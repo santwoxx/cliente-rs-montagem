@@ -312,8 +312,18 @@ class AuthController {
       el.style.display = isAdmin ? '' : 'none';
     });
 
-    // Hide admin navigation targets for employees
-    const adminNavTargets = ['view-financeiro', 'view-ajustes', 'view-orcamentos', 'view-montadores', 'view-lojas'];
+    // Recados que só fazem sentido para o funcionário.
+    document.querySelectorAll('[data-funcionario-only="true"]').forEach(el => {
+      el.style.display = isAdmin ? 'none' : '';
+    });
+
+    // Agora que se sabe quem entrou, as notificações se ajustam ao papel.
+    if (window.notificationsController) window.notificationsController.aoTrocarDeUsuario();
+
+    // Ajustes continua aberto ao montador, mas enxuto: lá dentro ele tem
+    // tema, instalação do app e notificações. Perfil, PIX, backup, financeiro
+    // e equipe são marcados como data-admin-only e somem para ele.
+    const adminNavTargets = ['view-financeiro', 'view-orcamentos', 'view-montadores', 'view-lojas'];
     adminNavTargets.forEach(target => {
       const navEls = document.querySelectorAll(`[data-view-target="${target}"]`);
       navEls.forEach(el => {

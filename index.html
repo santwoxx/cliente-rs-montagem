@@ -111,7 +111,7 @@
           <i class="fa-solid fa-calculator"></i>
           <span>Orçamentos</span>
         </button>
-        <button class="nav-item" data-view-target="view-ajustes" data-admin-only="true">
+        <button class="nav-item" data-view-target="view-ajustes">
           <i class="fa-solid fa-gear"></i>
           <span>Ajustes</span>
         </button>
@@ -628,9 +628,11 @@
              VIEW 6: AJUSTES & CONFIGURAÇÕES
              =============================================================== -->
         <section id="view-ajustes" class="app-view">
-          <div class="grid-2">
-            <!-- Profile and Business Settings -->
-            <div class="card">
+          <div class="grid-2 ajustes-grid">
+            <!-- Perfil e dados do negocio: exclusivo do administrador.
+                 E daqui que saem o nome, o CNPJ e a chave PIX impressos na nota
+                 que o cliente final recebe. -->
+            <div class="card" data-admin-only="true">
               <div class="card-header">
                 <h3 class="card-title"><i class="fa-solid fa-id-card"></i> Dados do Montador</h3>
               </div>
@@ -802,7 +804,7 @@
                 </button>
 
                 <div id="notif-configuracoes" style="display: none;">
-                  <label class="checkbox-row" style="margin-bottom: 10px;">
+                  <label class="checkbox-row" data-admin-only="true" style="margin-bottom: 10px;">
                     <input type="checkbox" id="notif-chk-resumo" checked>
                     <span>Resumo das montagens de manhã</span>
                   </label>
@@ -811,7 +813,7 @@
                     <input type="time" id="notif-hora-resumo" class="form-control" value="07:00">
                   </div>
 
-                  <label class="checkbox-row" style="margin: 14px 0 10px;">
+                  <label class="checkbox-row" data-admin-only="true" style="margin: 14px 0 10px;">
                     <input type="checkbox" id="notif-chk-lembrete" checked>
                     <span>Aviso antes de cada montagem</span>
                   </label>
@@ -825,6 +827,14 @@
                       <option value="90">1 hora e meia antes</option>
                       <option value="120">2 horas antes</option>
                     </select>
+                  </div>
+
+                  <div class="notif-obrigatoria" data-funcionario-only="true">
+                    <i class="fa-solid fa-lock"></i>
+                    <span>
+                      Os avisos de montagem ficam sempre ligados nesta conta.
+                      Você pode ajustar os horários, mas não desligá-los.
+                    </span>
                   </div>
 
                   <div class="notif-aviso">
@@ -841,14 +851,14 @@
                     <button class="btn btn-outline btn-sm" id="btn-testar-notificacao">
                       <i class="fa-solid fa-vial"></i> Ver como chega
                     </button>
-                    <button class="btn btn-outline btn-sm" id="btn-desativar-notificacoes">
+                    <button class="btn btn-outline btn-sm" data-admin-only="true" id="btn-desativar-notificacoes">
                       <i class="fa-solid fa-bell-slash" style="color: var(--danger);"></i> Desligar
                     </button>
                   </div>
                 </div>
               </div>
 
-              <div class="card" style="margin-bottom: 24px;">
+              <div class="card" data-admin-only="true" style="margin-bottom: 24px;">
                 <div class="card-header">
                   <h3 class="card-title"><i class="fa-solid fa-cloud-arrow-up"></i> Backup e Segurança</h3>
                 </div>
@@ -1001,7 +1011,7 @@
             <span>Orçar</span>
           </button>
         </li>
-        <li data-admin-only="true">
+        <li>
           <button class="bottom-nav-item" data-view-target="view-ajustes">
             <i class="fa-solid fa-gear"></i>
             <span>Ajustes</span>

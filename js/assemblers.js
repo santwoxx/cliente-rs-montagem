@@ -155,6 +155,7 @@ class AssemblersController {
 
     try {
       let contaCriada = false;
+      let loginFalhou = false;
 
       // Se informou e-mail e senha, provisiona a conta de login no Firebase Authentication
       if (!isOwner && email && password && window.authController) {
@@ -165,8 +166,11 @@ class AssemblersController {
           if (authErr && authErr.code === 'auth/email-already-in-use') {
             console.info('Conta do Firebase já existia para este e-mail.');
           } else {
+            // O cadastro do montador segue salvo, mas sem login ele nao entra
+            // no sistema. Anotamos para a mensagem final nao dizer "sucesso".
+            loginFalhou = true;
             console.warn('Aviso ao criar conta de acesso:', authErr);
-            window.app.showToast(window.authController.explicarErroDeCadastro(authErr), 'warning');
+            window.app.showToast(window.authController.explicarErroDeCadastro(authErr), 'danger');
           }
         }
       }
@@ -202,6 +206,11 @@ class AssemblersController {
 
           if (contaCriada) {
             window.app.showToast(`Montador ${name} atualizado e conta de login criada!`, 'success');
+          } else if (loginFalhou) {
+            window.app.showToast(
+              `${name} foi salvo na equipe, mas SEM login: ele ainda não consegue entrar no sistema.`,
+              'warning'
+            );
           } else {
             window.app.showToast('Montador atualizado com sucesso!', 'success');
           }
@@ -220,6 +229,11 @@ class AssemblersController {
 
         if (contaCriada) {
           window.app.showToast(`Montador ${name} cadastrado! Conta de login criada com sucesso.`, 'success');
+        } else if (loginFalhou) {
+          window.app.showToast(
+            `${name} entrou na equipe, mas SEM login: ele ainda não consegue entrar no sistema.`,
+            'warning'
+          );
         } else {
           window.app.showToast('Montador cadastrado com sucesso!', 'success');
         }

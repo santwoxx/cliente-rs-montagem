@@ -73,7 +73,11 @@ class App {
   navigateTo(viewId) {
     const auth = window.authController;
     if (auth && !auth.podeVerValoresCheios()) {
-      const adminViews = ['view-financeiro', 'view-ajustes', 'view-orcamentos', 'view-montadores', 'view-lojas'];
+      // Ajustes fica de fora desta lista de propósito: é lá que o montador
+      // troca o tema, instala o app e libera as notificações. O que é do dono
+      // dentro da tela (perfil, chave PIX, backup, equipe) está marcado como
+      // data-admin-only e some para ele.
+      const adminViews = ['view-financeiro', 'view-orcamentos', 'view-montadores', 'view-lojas'];
       if (adminViews.includes(viewId)) {
         this.navigateTo('view-agenda');
         this.showToast('Esta área é de acesso exclusivo do administrador.', 'warning');
@@ -145,7 +149,17 @@ class App {
 
     const info = titles[viewId] || { title: 'MovelPRO', subtitle: 'RS Montagens' };
     if (titleEl) titleEl.innerHTML = info.title;
-    if (subtitleEl) subtitleEl.textContent = info.subtitle;
+
+    let subtitulo = info.subtitle;
+
+    // Para o montador, Ajustes só tem tema, instalação e avisos — prometer
+    // "Perfil, Chave PIX e Backup" seria propaganda enganosa.
+    const auth = window.authController;
+    if (viewId === 'view-ajustes' && auth && !auth.podeVerValoresCheios()) {
+      subtitulo = 'Tema do app, instalação no celular e avisos de montagem';
+    }
+
+    if (subtitleEl) subtitleEl.textContent = subtitulo;
   }
 
   bindGlobalFAB() {
