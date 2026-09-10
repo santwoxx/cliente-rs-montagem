@@ -229,7 +229,7 @@ class FinanceController {
 
     const dateInput = document.getElementById('tx-date');
     if (dateInput) {
-      dateInput.value = new Date().toISOString().slice(0, 10);
+      dateInput.value = Utils.todayISO();
     }
 
     const modalTitle = document.getElementById('tx-modal-title');

@@ -86,7 +86,7 @@ class LicenseController {
     // Current simulated date: 2026-09-09.
     // Cutoff date for next month: 2026-10-09
     const cutoffDate = this.licenseData.paidUntil || '2026-10-09';
-    const today = new Date().toISOString().slice(0, 10);
+    const today = Utils.todayISO();
 
     // If today is equal or past cutoff date, block
     if (today >= cutoffDate) {
