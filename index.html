@@ -1422,23 +1422,30 @@
             <label class="form-label">WhatsApp</label>
             <input type="text" id="assembler-phone" class="form-control" placeholder="(11) 99999-9999">
           </div>
-          <div class="form-group">
-            <label class="form-label">E-mail de login deste montador</label>
-            <input type="email" id="assembler-email" class="form-control" placeholder="lucas@exemplo.com">
-            <small class="form-hint">
-              Precisa ser o mesmo e-mail cadastrado em Ajustes &rsaquo; Gestão da Equipe.
-              É por ele que o sistema sabe quais montagens são deste montador e
-              mostra a ele só o valor que ele recebe.
-            </small>
-          </div>
-          <label class="checkbox-row">
+          <label class="checkbox-row" style="margin-bottom: 14px;">
             <input type="checkbox" id="assembler-is-owner">
             <span>Sou eu (dono da empresa que também executa montagens)</span>
           </label>
+          <div id="assembler-login-fields">
+            <div class="form-group">
+              <label class="form-label">E-mail de login deste montador</label>
+              <input type="email" id="assembler-email" class="form-control" placeholder="lucas@exemplo.com">
+              <small class="form-hint">
+                E-mail que o montador usará para entrar no sistema.
+              </small>
+            </div>
+            <div class="form-group" id="assembler-password-group">
+              <label class="form-label">Senha de Acesso (Login)</label>
+              <input type="password" id="assembler-password" class="form-control" placeholder="Mínimo 6 caracteres" minlength="6">
+              <small class="form-hint" id="assembler-password-hint">
+                Defina a senha inicial para que o montador possa entrar no app no celular dele.
+              </small>
+            </div>
+          </div>
         </div>
         <div class="modal-footer">
           <button type="button" class="btn btn-outline" data-modal-close>Cancelar</button>
-          <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check"></i> Salvar Montador</button>
+          <button type="submit" class="btn btn-primary" id="assembler-submit-btn"><i class="fa-solid fa-check"></i> Salvar Montador</button>
         </div>
       </form>
     </div>

@@ -30,6 +30,16 @@ class AssemblersController {
       });
     }
 
+    const ownerCheckbox = document.getElementById('assembler-is-owner');
+    if (ownerCheckbox) {
+      ownerCheckbox.addEventListener('change', (e) => {
+        const loginFields = document.getElementById('assembler-login-fields');
+        if (loginFields) {
+          loginFields.style.display = e.target.checked ? 'none' : 'block';
+        }
+      });
+    }
+
     const periodPills = document.querySelectorAll('[data-assembler-period]');
     periodPills.forEach(pill => {
       pill.addEventListener('click', (e) => {
@@ -80,6 +90,9 @@ class AssemblersController {
     if (form) form.reset();
 
     const title = document.getElementById('assembler-modal-title');
+    const pwdInput = document.getElementById('assembler-password');
+    const pwdHint = document.getElementById('assembler-password-hint');
+    const loginFields = document.getElementById('assembler-login-fields');
 
     if (assemblerId) {
       if (title) title.innerHTML = '<i class="fa-solid fa-pen-to-square"></i> Editar Montador';
@@ -90,17 +103,27 @@ class AssemblersController {
         document.getElementById('assembler-email').value = a.email || '';
         document.getElementById('assembler-is-owner').checked = !!a.isOwner;
       }
-    } else if (title) {
-      title.innerHTML = '<i class="fa-solid fa-helmet-safety"></i> Novo Montador';
+      if (pwdInput) pwdInput.value = '';
+      if (pwdHint) pwdHint.textContent = 'Deixe em branco para manter a senha atual, ou digite uma nova para alterar.';
+    } else {
+      if (title) title.innerHTML = '<i class="fa-solid fa-helmet-safety"></i> Novo Montador';
+      if (pwdInput) pwdInput.value = '';
+      if (pwdHint) pwdHint.textContent = 'Defina a senha inicial (mínimo 6 caracteres) para que o montador possa entrar no app no celular dele.';
+    }
+
+    const isOwnerChecked = document.getElementById('assembler-is-owner')?.checked;
+    if (loginFields) {
+      loginFields.style.display = isOwnerChecked ? 'none' : 'block';
     }
 
     window.app.openModal('assembler-modal');
   }
 
-  handleFormSubmit() {
+  async handleFormSubmit() {
     const name = document.getElementById('assembler-name').value.trim();
     const phone = document.getElementById('assembler-phone').value.trim();
     const email = document.getElementById('assembler-email').value.trim().toLowerCase();
+    const password = (document.getElementById('assembler-password')?.value || '').trim();
     const isOwner = document.getElementById('assembler-is-owner').checked;
 
     if (!name) {
@@ -108,49 +131,97 @@ class AssemblersController {
       return;
     }
 
-    const assemblers = window.storageManager.getAssemblers();
-
-    // Só um montador pode ser marcado como dono.
-    if (isOwner) {
-      assemblers.forEach(a => {
-        if (a.id !== this.currentEditingId) a.isOwner = false;
-      });
+    if (!isOwner && email && password && password.length < 6) {
+      window.app.showToast('A senha de acesso do montador deve ter no mínimo 6 caracteres.', 'danger');
+      return;
     }
 
-    if (this.currentEditingId) {
-      const idx = assemblers.findIndex(a => a.id === this.currentEditingId);
-      if (idx !== -1) {
-        const previousName = assemblers[idx].name;
-        assemblers[idx] = { ...assemblers[idx], name, phone, email, isOwner };
-        window.storageManager.saveAssemblers(assemblers);
+    const submitBtn = document.getElementById('assembler-submit-btn');
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Salvando...';
+    }
 
-        // Mantém o nome gravado nos serviços em sincronia com o cadastro.
-        if (previousName !== name) {
-          const services = window.storageManager.getServices();
-          let changed = false;
-          services.forEach(s => {
-            if (s.assemblerId === this.currentEditingId) {
-              s.assemblerName = name;
-              changed = true;
-            }
+    try {
+      let contaCriada = false;
+
+      // Se informou e-mail e senha, provisiona a conta de login no Firebase Authentication
+      if (!isOwner && email && password && window.authController) {
+        try {
+          await window.authController.criarContaFuncionario(name, email, password, phone);
+          contaCriada = true;
+        } catch (authErr) {
+          if (authErr && authErr.code === 'auth/email-already-in-use') {
+            console.info('Conta do Firebase já existia para este e-mail.');
+          } else {
+            console.warn('Aviso ao criar conta de acesso:', authErr);
+            window.app.showToast(window.authController.explicarErroDeCadastro(authErr), 'warning');
+          }
+        }
+      }
+
+      const assemblers = window.storageManager.getAssemblers();
+
+      // Só um montador pode ser marcado como dono.
+      if (isOwner) {
+        assemblers.forEach(a => {
+          if (a.id !== this.currentEditingId) a.isOwner = false;
+        });
+      }
+
+      if (this.currentEditingId) {
+        const idx = assemblers.findIndex(a => a.id === this.currentEditingId);
+        if (idx !== -1) {
+          const previousName = assemblers[idx].name;
+          assemblers[idx] = { ...assemblers[idx], name, phone, email, isOwner };
+          window.storageManager.saveAssemblers(assemblers);
+
+          // Mantém o nome gravado nos serviços em sincronia com o cadastro.
+          if (previousName !== name) {
+            const services = window.storageManager.getServices();
+            let changed = false;
+            services.forEach(s => {
+              if (s.assemblerId === this.currentEditingId) {
+                s.assemblerName = name;
+                changed = true;
+              }
+            });
+            if (changed) window.storageManager.saveServices(services);
+          }
+
+          if (contaCriada) {
+            window.app.showToast(`Montador ${name} atualizado e conta de login criada!`, 'success');
+          } else {
+            window.app.showToast('Montador atualizado com sucesso!', 'success');
+          }
+        }
+      } else {
+        // Se a conta acabou de ser criada por criarContaFuncionario, o vincularMontador já pode ter adicionado
+        const existente = assemblers.find(a => email && String(a.email || '').toLowerCase() === email);
+        if (!existente) {
+          assemblers.push({
+            id: 'a_' + Date.now(),
+            name, phone, email, isOwner,
+            createdAt: new Date().toISOString()
           });
-          if (changed) window.storageManager.saveServices(services);
+          window.storageManager.saveAssemblers(assemblers);
         }
 
-        window.app.showToast('Montador atualizado com sucesso!', 'success');
+        if (contaCriada) {
+          window.app.showToast(`Montador ${name} cadastrado! Conta de login criada com sucesso.`, 'success');
+        } else {
+          window.app.showToast('Montador cadastrado com sucesso!', 'success');
+        }
       }
-    } else {
-      assemblers.push({
-        id: 'a_' + Date.now(),
-        name, phone, email, isOwner,
-        createdAt: new Date().toISOString()
-      });
-      window.storageManager.saveAssemblers(assemblers);
-      window.app.showToast('Montador cadastrado com sucesso!', 'success');
-    }
 
-    window.app.closeModal('assembler-modal');
-    this.render();
+      window.app.closeModal('assembler-modal');
+      this.render();
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fa-solid fa-check"></i> Salvar Montador';
+      }
+    }
   }
 
   deleteAssembler(assemblerId) {

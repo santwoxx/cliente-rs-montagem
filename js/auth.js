@@ -316,6 +316,75 @@ class AuthController {
   }
 
   // Admin Function: Create new employee account without logging out admin
+  async criarContaFuncionario(name, email, password, phone = '') {
+    if (!this.isAdmin) {
+      throw new Error('Apenas administradores podem cadastrar funcionários.');
+    }
+
+    const nomeTratado = String(name || '').trim();
+    const emailTratado = String(email || '').trim().toLowerCase();
+
+    if (!nomeTratado || !emailTratado || !password) {
+      throw new Error('Preencha nome, e-mail e senha do funcionário.');
+    }
+
+    if (password.length < 6) {
+      throw new Error('A senha deve ter no mínimo 6 caracteres.');
+    }
+
+    let tempApp = null;
+
+    try {
+      // Cria instância secundária do Firebase App para NÃO deslogar o Admin
+      const tempAppName = 'SecondaryAuthApp_' + Date.now();
+      tempApp = firebase.initializeApp(window.firebaseConfig, tempAppName);
+      const userCredential = await tempApp.auth().createUserWithEmailAndPassword(emailTratado, password);
+
+      const uid = userCredential.user.uid;
+
+      if (userCredential.user) {
+        await userCredential.user.updateProfile({ displayName: nomeTratado });
+      }
+
+      await tempApp.auth().signOut();
+      await tempApp.delete();
+      tempApp = null;
+
+      // Salva no Firestore
+      const employeeData = {
+        uid,
+        name: nomeTratado,
+        email: emailTratado,
+        phone: phone || '',
+        role: 'funcionario',
+        createdAt: new Date().toISOString(),
+        createdBy: this.currentUser ? this.currentUser.email : 'admin'
+      };
+
+      if (window.firestoreDb) {
+        await window.firestoreDb.collection('users').doc(uid).set(employeeData);
+      }
+
+      // Salva no cache da equipe
+      const localTeam = JSON.parse(localStorage.getItem('movelpro_team') || '[]');
+      const semDuplicados = localTeam.filter(m => m.email !== emailTratado && m.uid !== uid);
+      semDuplicados.push(employeeData);
+      localStorage.setItem('movelpro_team', JSON.stringify(semDuplicados));
+
+      // Vincula no cadastro de montadores
+      this.vincularMontador(nomeTratado, emailTratado, phone);
+
+      if (this.loadTeamMembers) this.loadTeamMembers();
+
+      return { success: true, uid };
+    } catch (e) {
+      if (tempApp) {
+        try { await tempApp.delete(); } catch (_) {}
+      }
+      throw e;
+    }
+  }
+
   async handleCreateEmployee() {
     if (!this.isAdmin) {
       window.app.showToast('Apenas administradores podem cadastrar funcionários.', 'danger');
@@ -348,64 +417,14 @@ class AuthController {
       submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Cadastrando...';
     }
 
-    let tempApp = null;
-
     try {
-      // Create secondary Firebase App instance so Admin session is NOT interrupted
-      const tempAppName = 'SecondaryAuthApp_' + Date.now();
-      tempApp = firebase.initializeApp(window.firebaseConfig, tempAppName);
-      const userCredential = await tempApp.auth().createUserWithEmailAndPassword(email, password);
-
-      // Guarda o uid ANTES de encerrar o app temporário: depois do delete()
-      // o objeto do usuário fica inválido e o cadastro ia para o Firestore sem id.
-      const uid = userCredential.user.uid;
-
-      // Update display name
-      if (userCredential.user) {
-        await userCredential.user.updateProfile({ displayName: name });
-      }
-
-      await tempApp.auth().signOut();
-      await tempApp.delete();
-      tempApp = null;
-
-      // Save employee record in Firestore
-      const employeeData = {
-        uid,
-        name,
-        email,
-        role: 'funcionario',
-        createdAt: new Date().toISOString(),
-        createdBy: this.currentUser.email
-      };
-
-      if (window.firestoreDb) {
-        await window.firestoreDb.collection('users').doc(uid).set(employeeData);
-      }
-
-      // Also save in local storage team cache
-      const localTeam = JSON.parse(localStorage.getItem('movelpro_team') || '[]');
-      localTeam.push(employeeData);
-      localStorage.setItem('movelpro_team', JSON.stringify(localTeam));
-
-      // Já deixa o montador cadastrado com este login vinculado, senão o
-      // funcionário entra no sistema e não enxerga as montagens dele.
-      this.vincularMontador(name, email);
-
+      await this.criarContaFuncionario(name, email, password);
       window.app.showToast(`Funcionário ${name} cadastrado com sucesso! Ele já pode fazer login.`, 'success');
-
-      // Reset form
       document.getElementById('employee-form').reset();
-      this.loadTeamMembers();
     } catch (e) {
       console.error('Erro ao cadastrar funcionário:', e);
       window.app.showToast(this.explicarErroDeCadastro(e), 'danger');
     } finally {
-      // Se quebrou no meio, o app temporário precisa sair do ar de qualquer jeito,
-      // senão o próximo cadastro falha por nome de app duplicado.
-      if (tempApp) {
-        try { await tempApp.delete(); } catch (_) { /* já foi */ }
-      }
       if (submitBtn) {
         submitBtn.disabled = false;
         submitBtn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Cadastrar Funcionário';
@@ -423,7 +442,7 @@ class AuthController {
 
     const mapa = {
       'auth/email-already-in-use':
-        'Este e-mail já tem conta no sistema. Use outro e-mail ou apague a conta antiga no Firebase.',
+        'Este e-mail já tem conta no sistema. Use outro e-mail ou redefina a senha dele.',
       'auth/invalid-email':
         'E-mail inválido. Confira se está escrito certo, sem espaço sobrando.',
       'auth/weak-password':
@@ -447,7 +466,7 @@ class AuthController {
    * É esse vínculo que faz o funcionário abrir o app e ver só as montagens
    * dele, com o valor que ele recebe em vez do valor cheio do cliente.
    */
-  vincularMontador(nome, email) {
+  vincularMontador(nome, email, phone = '') {
     if (!window.storageManager) return;
 
     const assemblers = window.storageManager.getAssemblers();
@@ -456,6 +475,7 @@ class AuthController {
 
     if (existente) {
       if (!existente.name && nome) existente.name = nome;
+      if (!existente.phone && phone) existente.phone = phone;
       window.storageManager.saveAssemblers(assemblers);
       return;
     }
@@ -466,6 +486,7 @@ class AuthController {
     );
     if (porNome) {
       porNome.email = email;
+      if (!porNome.phone && phone) porNome.phone = phone;
       window.storageManager.saveAssemblers(assemblers);
       return;
     }
@@ -474,7 +495,7 @@ class AuthController {
       id: 'a_' + Date.now(),
       name: nome,
       email,
-      phone: '',
+      phone: phone || '',
       isOwner: false,
       createdAt: new Date().toISOString()
     });
