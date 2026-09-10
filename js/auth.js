@@ -326,7 +326,7 @@ class AuthController {
     // Ajustes continua aberto ao montador, mas enxuto: lá dentro ele tem
     // tema, instalação do app e notificações. Perfil, PIX, backup, financeiro
     // e equipe são marcados como data-admin-only e somem para ele.
-    const adminNavTargets = ['view-financeiro', 'view-orcamentos', 'view-montadores', 'view-lojas'];
+    const adminNavTargets = ['view-clientes', 'view-orcamentos', 'view-montadores', 'view-lojas'];
     adminNavTargets.forEach(target => {
       const navEls = document.querySelectorAll(`[data-view-target="${target}"]`);
       navEls.forEach(el => {

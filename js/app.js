@@ -77,7 +77,11 @@ class App {
       // troca o tema, instala o app e libera as notificações. O que é do dono
       // dentro da tela (perfil, chave PIX, backup, equipe) está marcado como
       // data-admin-only e some para ele.
-      const adminViews = ['view-financeiro', 'view-orcamentos', 'view-montadores', 'view-lojas'];
+      // Financeiro sai desta lista: o montador tem a versão dele, só com o
+      // que ele recebeu e o que tem a receber. Clientes entra — a carteira de
+      // clientes é do dono, o montador só precisa do contato de quem ele vai
+      // atender, e isso já vem na ficha da montagem.
+      const adminViews = ['view-clientes', 'view-orcamentos', 'view-montadores', 'view-lojas'];
       if (adminViews.includes(viewId)) {
         this.navigateTo('view-agenda');
         this.showToast('Esta área é de acesso exclusivo do administrador.', 'warning');
@@ -155,8 +159,16 @@ class App {
     // Para o montador, Ajustes só tem tema, instalação e avisos — prometer
     // "Perfil, Chave PIX e Backup" seria propaganda enganosa.
     const auth = window.authController;
-    if (viewId === 'view-ajustes' && auth && !auth.podeVerValoresCheios()) {
+    const ehMontador = auth && !auth.podeVerValoresCheios();
+
+    if (viewId === 'view-ajustes' && ehMontador) {
       subtitulo = 'Tema do app, instalação no celular e avisos de montagem';
+    }
+
+    // Para o montador o Financeiro é o extrato dele, não o caixa do negócio.
+    if (viewId === 'view-financeiro' && ehMontador) {
+      titleEl.innerHTML = '<i class="fa-solid fa-wallet" style="color: var(--primary);"></i> Seus Ganhos';
+      subtitulo = 'O que você já recebeu e o que ainda tem a receber';
     }
 
     if (subtitleEl) subtitleEl.textContent = subtitulo;
@@ -259,7 +271,7 @@ class App {
   }
 
   updateDashboardKPIs() {
-    const services = window.storageManager.getServices();
+    const services = Utils.servicosVisiveis();
     const transactions = window.storageManager.getTransactions();
 
     // Mês corrente, calculado na hora (nada de data fixa no código)

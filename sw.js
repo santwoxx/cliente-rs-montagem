@@ -6,7 +6,7 @@
    abaixo. É isso que faz o celular do montador baixar a versão nova.
    ========================================================================== */
 
-const CACHE_VERSION = 'v14';
+const CACHE_VERSION = 'v15';
 const CACHE_APP = `rs-montagens-app-${CACHE_VERSION}`;
 const CACHE_CDN = `rs-montagens-cdn-${CACHE_VERSION}`;
 

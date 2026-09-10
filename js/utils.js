@@ -109,6 +109,30 @@ const Utils = {
     return this.toNumber(service.assemblerPay);
   },
 
+  /* ---------- O que cada um enxerga ---------- */
+
+  /**
+   * Serviços que o usuário logado pode ver.
+   *
+   * O administrador vê a operação inteira. O montador vê apenas as montagens
+   * em que foi escalado — nem a agenda, nem o início, nem o financeiro dele
+   * podem mostrar serviço de outro montador.
+   *
+   * Montador sem vínculo de e-mail não vê nada, de propósito: é mais seguro
+   * que a tela fique vazia com um aviso do que abrir a operação toda.
+   */
+  servicosVisiveis() {
+    const auth = window.authController;
+    if (!auth || auth.podeVerValoresCheios()) {
+      return window.storageManager.getServices() || [];
+    }
+
+    const meuId = auth.getCurrentAssemblerId();
+    if (!meuId) return [];
+
+    return window.storageManager.servicesOf('assemblerId', meuId);
+  },
+
   // O montador que executou é o próprio dono? Então não há repasse a pagar.
   isOwnerAssembler(service) {
     if (!service || !service.assemblerId) return false;

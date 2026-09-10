@@ -64,8 +64,10 @@ class CalendarController {
     const firstDayIndex = new Date(this.currentYear, this.currentMonth, 1).getDay(); // 0 is Sunday
     const totalDays = new Date(this.currentYear, this.currentMonth + 1, 0).getDate();
 
-    // Get all services
-    const services = window.storageManager.getServices();
+    // Só as montagens que este usuário pode ver: o dono enxerga tudo, o
+    // montador só as dele. Sem isso o calendário marcava dias cheios de
+    // serviço de outro montador.
+    const services = Utils.servicosVisiveis();
 
     // Group services by date string "YYYY-MM-DD"
     const servicesByDate = {};
@@ -155,7 +157,7 @@ class CalendarController {
       headerDate.textContent = formattedDate;
     }
 
-    const services = window.storageManager.getServices();
+    const services = Utils.servicosVisiveis();
     const dayServices = services.filter(s => s.date === dateKey);
 
     if (headerCount) {

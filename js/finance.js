@@ -9,6 +9,7 @@ class FinanceController {
     this.currentTypeFilter = 'all'; // 'all', 'receita', 'despesa'
     this.cashflowChart = null;
     this.categoryChart = null;
+    this.montadorPeriodo = 'all'; // filtro da tela financeira do montador
   }
 
   init() {
@@ -16,7 +17,134 @@ class FinanceController {
     this.render();
   }
 
+  /* ---------- Financeiro do montador ---------- */
+
+  /**
+   * Tela do montador: quanto ele já recebeu e quanto tem a receber pelas
+   * montagens em que foi escalado.
+   *
+   * Trabalha sobre o repasse (assemblerPay), nunca sobre o valor cobrado do
+   * cliente nem sobre os lançamentos do caixa do negócio. O que entra aqui é
+   * apenas o que Utils.servicosVisiveis() devolve — as montagens dele.
+   */
+  renderMontador() {
+    const auth = window.authController;
+    const lista = document.getElementById('mont-lista');
+    if (!lista) return;
+
+    // Montador sem e-mail vinculado no cadastro não tem como ser identificado.
+    if (auth && !auth.getCurrentAssemblerId()) {
+      this.zerarPainelMontador();
+      lista.innerHTML = `
+        <div class="empty-day-state">
+          <i class="fa-solid fa-user-lock"></i>
+          <p>Sua conta ainda não está ligada a um montador do cadastro.</p>
+          <small style="color: var(--text-muted);">
+            Peça ao administrador para abrir <strong>Montadores</strong>, editar o seu
+            cadastro e preencher o campo <strong>E-mail de login</strong> com este mesmo e-mail.
+          </small>
+        </div>
+      `;
+      return;
+    }
+
+    const meus = this.filtrarPeriodoMontador(Utils.servicosVisiveis())
+      .filter(s => s.status !== 'cancelado')
+      .sort((a, b) => String(b.date).localeCompare(String(a.date)));
+
+    let recebido = 0;
+    let aReceber = 0;
+    let concluidas = 0;
+    let agendadas = 0;
+
+    meus.forEach(s => {
+      const pay = Utils.assemblerPay(s);
+      if (s.status === 'concluido') {
+        recebido += pay;
+        concluidas++;
+      } else {
+        aReceber += pay;
+        agendadas++;
+      }
+    });
+
+    const def = (id, valor) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = valor;
+    };
+    def('mont-recebido', Utils.formatBRL(recebido));
+    def('mont-a-receber', Utils.formatBRL(aReceber));
+    def('mont-concluidas', String(concluidas));
+    def('mont-agendadas', String(agendadas));
+    def('mont-contador', meus.length === 1 ? '1 montagem' : `${meus.length} montagens`);
+
+    if (meus.length === 0) {
+      lista.innerHTML = `
+        <div class="empty-day-state">
+          <i class="fa-regular fa-folder-open"></i>
+          <p>Nenhuma montagem sua neste período.</p>
+        </div>
+      `;
+      return;
+    }
+
+    const esc = (v) => Utils.escapeHtml(v);
+    lista.innerHTML = meus.map(s => {
+      const pay = Utils.assemblerPay(s);
+      const pago = s.status === 'concluido';
+      return `
+        <button class="history-item" onclick="window.servicesController.openServiceDetailModal('${Utils.escapeJsString(s.id)}')">
+          <div class="history-main">
+            <h5><span class="type-tag">${esc(s.serviceType || 'Montagem')}</span> ${esc(s.description)}</h5>
+            <span class="history-date">${Utils.formatDateBR(s.date)} às ${esc(s.time)}h &bull; ${esc(s.clientName)}</span>
+            <span class="badge ${pago ? 'badge-pago' : 'badge-pendente'}">
+              ${pago ? 'Recebido' : 'A receber'}
+            </span>
+          </div>
+          <div class="history-money">
+            <strong style="color: ${pago ? 'var(--success-dark)' : 'var(--primary)'};">${Utils.formatBRL(pay)}</strong>
+            <span class="history-net">${pago ? 'você recebeu' : 'você recebe'}</span>
+          </div>
+        </button>
+      `;
+    }).join('');
+  }
+
+  zerarPainelMontador() {
+    [['mont-recebido', 'R$ 0,00'], ['mont-a-receber', 'R$ 0,00'],
+     ['mont-concluidas', '0'], ['mont-agendadas', '0'], ['mont-contador', '0']]
+      .forEach(([id, v]) => {
+        const el = document.getElementById(id);
+        if (el) el.textContent = v;
+      });
+  }
+
+  filtrarPeriodoMontador(servicos) {
+    const filtro = this.montadorPeriodo || 'all';
+    if (filtro === 'all') return servicos;
+
+    const mes = Utils.currentMonthPrefix();
+    const ano = String(new Date().getFullYear());
+    return servicos.filter(s => {
+      const d = s.date || '';
+      if (filtro === 'month') return d.startsWith(mes);
+      if (filtro === 'year') return d.startsWith(ano);
+      return true;
+    });
+  }
+
   bindEvents() {
+    // Filtro de período da tela do montador
+    const montadorPills = document.querySelectorAll('[data-montador-period]');
+    montadorPills.forEach(pill => {
+      pill.addEventListener('click', (e) => {
+        montadorPills.forEach(p => p.classList.remove('active'));
+        e.currentTarget.classList.add('active');
+        this.montadorPeriodo = e.currentTarget.dataset.montadorPeriod;
+        this.renderMontador();
+      });
+    });
+
     // Period filter pills
     const periodPills = document.querySelectorAll('[data-finance-period]');
     periodPills.forEach(pill => {
@@ -204,6 +332,14 @@ class FinanceController {
   }
 
   render() {
+    // O montador tem a própria tela: só o repasse dele, nunca o caixa do
+    // negócio. Sair aqui evita até montar os gráficos que ele não pode ver.
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      this.renderMontador();
+      return;
+    }
+
     const allTransactions = window.storageManager.getTransactions();
     const periodTransactions = this.filterTransactionsByPeriod(allTransactions);
 

@@ -91,11 +91,11 @@
           <i class="fa-regular fa-calendar-days"></i>
           <span>Agenda</span>
         </button>
-        <button class="nav-item" data-view-target="view-financeiro" data-admin-only="true">
+        <button class="nav-item" data-view-target="view-financeiro">
           <i class="fa-solid fa-wallet"></i>
           <span>Financeiro</span>
         </button>
-        <button class="nav-item" data-view-target="view-clientes">
+        <button class="nav-item" data-view-target="view-clientes" data-admin-only="true">
           <i class="fa-solid fa-users"></i>
           <span>Clientes</span>
         </button>
@@ -336,6 +336,71 @@
              VIEW 3: FINANCEIRO (CONTROLE FINANCEIRO COMPLETO)
              =============================================================== -->
         <section id="view-financeiro" class="app-view">
+
+          <!-- ---------------------------------------------------------------
+               FINANCEIRO DO MONTADOR
+               Só o que ele recebeu e o que tem a receber pelas montagens em
+               que foi escalado. Nunca o valor cobrado do cliente.
+               --------------------------------------------------------------- -->
+          <div data-funcionario-only="true" id="fin-montador">
+            <div class="filter-bar">
+              <div class="filter-group">
+                <span style="font-weight: 700; font-size: 0.85rem; color: var(--text-muted); margin-right: 4px;">Período:</span>
+                <button class="pill-filter" data-montador-period="month">Este Mês</button>
+                <button class="pill-filter" data-montador-period="year">Este Ano</button>
+                <button class="pill-filter active" data-montador-period="all">Tudo</button>
+              </div>
+            </div>
+
+            <div class="grid-auto" style="margin-bottom: 20px;">
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span class="stat-title">Você recebeu</span>
+                  <div class="stat-icon icon-green"><i class="fa-solid fa-hand-holding-dollar"></i></div>
+                </div>
+                <div class="stat-value" id="mont-recebido" style="color: var(--success-dark);">R$ 0,00</div>
+                <div class="stat-subtitle">Montagens já concluídas</div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span class="stat-title">A receber</span>
+                  <div class="stat-icon icon-orange"><i class="fa-solid fa-hourglass-half"></i></div>
+                </div>
+                <div class="stat-value" id="mont-a-receber" style="color: var(--primary);">R$ 0,00</div>
+                <div class="stat-subtitle">Montagens ainda agendadas</div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span class="stat-title">Concluídas</span>
+                  <div class="stat-icon icon-blue"><i class="fa-solid fa-circle-check"></i></div>
+                </div>
+                <div class="stat-value" id="mont-concluidas">0</div>
+                <div class="stat-subtitle">No período escolhido</div>
+              </div>
+
+              <div class="stat-card">
+                <div class="stat-header">
+                  <span class="stat-title">Agendadas</span>
+                  <div class="stat-icon icon-orange"><i class="fa-regular fa-calendar"></i></div>
+                </div>
+                <div class="stat-value" id="mont-agendadas">0</div>
+                <div class="stat-subtitle">Próximas montagens suas</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-header">
+                <h3 class="card-title"><i class="fa-solid fa-list-check"></i> Suas montagens</h3>
+                <span class="badge badge-funcionario" id="mont-contador">0</span>
+              </div>
+              <div id="mont-lista"></div>
+            </div>
+          </div>
+
+          <!-- Financeiro completo do negócio: exclusivo do administrador -->
+          <div data-admin-only="true">
           <!-- Top Filter Bar -->
           <div class="filter-bar">
             <div class="filter-group">
@@ -445,6 +510,7 @@
               </table>
             </div>
           </div>
+          </div><!-- /fim do bloco exclusivo do administrador -->
         </section>
 
         <!-- ===============================================================
@@ -981,13 +1047,13 @@
             <span>Agenda</span>
           </button>
         </li>
-        <li>
+        <li data-admin-only="true">
           <button class="bottom-nav-item" data-view-target="view-clientes">
             <i class="fa-solid fa-users"></i>
             <span>Clientes</span>
           </button>
         </li>
-        <li data-admin-only="true">
+        <li>
           <button class="bottom-nav-item" data-view-target="view-financeiro">
             <i class="fa-solid fa-wallet"></i>
             <span>Financeiro</span>
