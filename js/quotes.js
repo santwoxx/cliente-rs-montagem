@@ -61,6 +61,17 @@ class QuotesController {
       });
     }
 
+    // Edit catalog events
+    const editCatalogBtn = document.getElementById('btn-edit-catalog');
+    if (editCatalogBtn) {
+      editCatalogBtn.addEventListener('click', () => this.openCatalogModal());
+    }
+
+    const addCatalogItemBtn = document.getElementById('btn-add-catalog-item');
+    if (addCatalogItemBtn) {
+      addCatalogItemBtn.addEventListener('click', () => this.addCatalogItem());
+    }
+
     // Envio da nota aberta direto para o cliente / loja
     const sendReceiptBtn = document.getElementById('btn-send-receipt-whatsapp');
     if (sendReceiptBtn) {
@@ -267,6 +278,87 @@ class QuotesController {
     }).join('');
 
     this.updateTotal();
+  }
+
+  /* ---------- Edição do Catálogo ---------- */
+
+  openCatalogModal() {
+    this.renderCatalogModalList();
+    document.getElementById('new-catalog-name').value = '';
+    document.getElementById('new-catalog-price').value = '';
+    window.app.openModal('catalog-modal');
+  }
+
+  renderCatalogModalList() {
+    const container = document.getElementById('catalog-items-list');
+    if (!container) return;
+
+    const settings = window.storageManager.getSettings();
+    const prices = settings.defaultPrices || [];
+
+    if (prices.length === 0) {
+      container.innerHTML = '<div style="color: var(--text-muted); font-size: 0.9rem; padding: 10px;">Nenhum item no catálogo.</div>';
+      return;
+    }
+
+    container.innerHTML = prices.map(item => `
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 10px; border-bottom: 1px solid var(--border-color);">
+        <div>
+          <div style="font-weight: 600; font-size: 0.9rem;">${Utils.escapeHtml(item.name)}</div>
+          <div style="font-size: 0.85rem; color: var(--primary);">R$ ${item.price.toFixed(2).replace('.', ',')}</div>
+        </div>
+        <button type="button" class="btn btn-outline btn-sm btn-icon" style="border-color: var(--danger); color: var(--danger);" onclick="window.quotesController.removeCatalogItem(${item.id})">
+          <i class="fa-solid fa-trash"></i>
+        </button>
+      </div>
+    `).join('');
+  }
+
+  addCatalogItem() {
+    const nameInput = document.getElementById('new-catalog-name');
+    const priceInput = document.getElementById('new-catalog-price');
+    
+    const name = nameInput.value.trim();
+    const price = Utils.toNumber(priceInput.value);
+
+    if (!name || isNaN(price) || price < 0) {
+      window.app.showToast('Preencha o nome e um preço válido.', 'danger');
+      return;
+    }
+
+    const settings = window.storageManager.getSettings();
+    if (!settings.defaultPrices) settings.defaultPrices = [];
+
+    const newId = Date.now();
+    settings.defaultPrices.push({ id: newId, name, price });
+    
+    window.storageManager.saveSettings(settings);
+    window.app.showToast('Item adicionado ao catálogo!', 'success');
+    
+    nameInput.value = '';
+    priceInput.value = '';
+    
+    this.renderCatalogModalList();
+    this.renderCatalog();
+  }
+
+  removeCatalogItem(id) {
+    if (!confirm('Deseja realmente remover este item do catálogo?')) return;
+    
+    const settings = window.storageManager.getSettings();
+    if (!settings.defaultPrices) return;
+
+    settings.defaultPrices = settings.defaultPrices.filter(item => item.id !== id);
+    window.storageManager.saveSettings(settings);
+    
+    // Remove from selected if it was there
+    if (this.selectedItems[id]) {
+      delete this.selectedItems[id];
+    }
+    
+    window.app.showToast('Item removido do catálogo.', 'success');
+    this.renderCatalogModalList();
+    this.renderCatalog();
   }
 
   changeItemQty(itemId, delta) {

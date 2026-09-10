@@ -111,6 +111,8 @@ class AssemblersController {
       if (a) {
         document.getElementById('assembler-name').value = a.name || '';
         document.getElementById('assembler-phone').value = a.phone || '';
+        const pixEl = document.getElementById('assembler-pix-key');
+        if (pixEl) pixEl.value = a.pixKey || '';
         document.getElementById('assembler-email').value = a.email || '';
         document.getElementById('assembler-is-owner').checked = !!a.isOwner;
       }
@@ -133,6 +135,8 @@ class AssemblersController {
   async handleFormSubmit() {
     const name = document.getElementById('assembler-name').value.trim();
     const phone = document.getElementById('assembler-phone').value.trim();
+    const pixKeyEl = document.getElementById('assembler-pix-key');
+    const pixKey = pixKeyEl ? pixKeyEl.value.trim() : '';
     const email = document.getElementById('assembler-email').value.trim().toLowerCase();
     const password = (document.getElementById('assembler-password')?.value || '').trim();
     const isOwner = document.getElementById('assembler-is-owner').checked;
@@ -188,7 +192,7 @@ class AssemblersController {
         const idx = assemblers.findIndex(a => a.id === this.currentEditingId);
         if (idx !== -1) {
           const previousName = assemblers[idx].name;
-          assemblers[idx] = { ...assemblers[idx], name, phone, email, isOwner };
+          assemblers[idx] = { ...assemblers[idx], name, phone, email, isOwner, pixKey };
           window.storageManager.saveAssemblers(assemblers);
 
           // Mantém o nome gravado nos serviços em sincronia com o cadastro.
@@ -221,7 +225,7 @@ class AssemblersController {
         if (!existente) {
           assemblers.push({
             id: 'a_' + Date.now(),
-            name, phone, email, isOwner,
+            name, phone, email, isOwner, pixKey,
             createdAt: new Date().toISOString()
           });
           window.storageManager.saveAssemblers(assemblers);
@@ -485,9 +489,18 @@ class AssemblersController {
 
       <div class="card">
         <div class="card-header">
-          <h3 class="card-title">
+          <h3 class="card-title" style="margin-bottom: 0;">
             <i class="fa-solid fa-clipboard-list"></i> Montagens de ${esc(assembler.name)}
           </h3>
+          ${ehAdmin && assembler.pixKey ? `
+            <div style="font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; font-weight: normal; margin-bottom: 10px;">
+              <i class="fa-brands fa-pix" style="color: #32bcad;"></i> PIX: 
+              <span style="font-weight: 600;">${esc(assembler.pixKey)}</span>
+              <button class="btn btn-outline btn-sm" style="padding: 2px 6px; font-size: 0.7rem; margin-left: 8px;" onclick="navigator.clipboard.writeText('${esc(assembler.pixKey)}').then(() => window.app.showToast('Chave PIX copiada!', 'success'))">
+                Copiar
+              </button>
+            </div>
+          ` : ''}
           ${ehAdmin ? `
             <div class="detail-actions" style="margin: 0;">
               <button class="btn btn-outline btn-sm" onclick="window.assemblersController.openAssemblerModal('${idArg}')">
