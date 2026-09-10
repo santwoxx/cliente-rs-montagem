@@ -25,15 +25,18 @@ const DEFAULT_SERVICE_TYPES = [
   'Diária'
 ];
 
+// Perfil em branco: quem usa preenche em Ajustes na primeira vez.
+// Nome e PIX de exemplo não podem sobrar aqui — eles vão impressos na nota
+// que o cliente final recebe.
 const DEFAULT_SETTINGS = {
-  montadorName: 'Rodrigo Silva',
+  montadorName: '',
   companyName: 'RS Montagens de Móveis',
-  phone: '11987654321',
+  phone: '',
   profession: 'Montador de Móveis',
   cnpj: '',
   address: '',
   city: '',
-  pixKey: '11987654321',
+  pixKey: '',
   pixType: 'Telefone',
   bankName: '',
   pixHolder: '',
@@ -63,256 +66,20 @@ const DEFAULT_SETTINGS = {
   ]
 };
 
-const SEED_CUSTOMERS = [
-  {
-    id: 'c1',
-    name: 'Eder Oliveira',
-    phone: '11991234567',
-    cep: '01310-100',
-    address: 'Av. Paulista, 1000',
-    complement: 'Apto 42',
-    neighborhood: 'Bela Vista',
-    city: 'São Paulo - SP',
-    notes: 'Cliente pontual, apartamento com portaria e elevador de serviço.',
-    createdAt: '2026-09-01T10:00:00Z'
-  },
-  {
-    id: 'c2',
-    name: 'Mariana Santos',
-    phone: '11988776655',
-    cep: '04538-133',
-    address: 'Rua Joaquim Floriano, 550',
-    complement: 'Bloco B, 71',
-    neighborhood: 'Itaim Bibi',
-    city: 'São Paulo - SP',
-    notes: 'Solicitou montagem de guarda-roupa 6 portas novo.',
-    createdAt: '2026-09-02T11:30:00Z'
-  },
-  {
-    id: 'c3',
-    name: 'Carlos Alberto Souza',
-    phone: '11977665544',
-    cep: '02012-000',
-    address: 'Rua Voluntários da Pátria, 1200',
-    complement: 'Casa 2',
-    neighborhood: 'Santana',
-    city: 'São Paulo - SP',
-    notes: 'Montagem de cozinha modulada e mesa com 6 cadeiras.',
-    createdAt: '2026-09-03T09:00:00Z'
-  },
-  {
-    id: 'c4',
-    name: 'Loja TokLar Móveis',
-    phone: '11966554433',
-    cep: '03001-000',
-    address: 'Rua do Gasômetro, 300',
-    complement: '',
-    neighborhood: 'Brás',
-    city: 'São Paulo - SP',
-    notes: 'Parceiro lojista - repassa montagens semanais em domicílio.',
-    createdAt: '2026-08-15T14:00:00Z'
-  }
-];
+// Sistema entregue limpo: o montador cadastra os proprios clientes.
+const SEED_CUSTOMERS = [];
 
-// Seed services matching the user's screenshot:
-// Setembro 2026: Dia 07 = Concluído, Dia 08 = Concluído, Dia 09 = Agendado (Eder)
-// cost = gastos com material do serviço (corrediça, dobradiça, parafuso...).
-// O cliente paga 'value' + 'travelFee'; o lucro líquido é esse total - cost.
-const SEED_SERVICES = [
-  {
-    id: 's1',
-    clientId: 'c2',
-    clientName: 'Mariana Santos',
-    clientPhone: '11988776655',
-    clientAddress: 'Rua Joaquim Floriano, 550 - Itaim Bibi, SP',
-    date: '2026-09-07',
-    time: '09:00',
-    description: 'Montagem Guarda-Roupa Casal 6 Portas + Painel TV',
-    serviceType: 'Montagem',
-    value: 350.00,
-    travelFee: 0.00,
-    cost: 0.00,
-    status: 'concluido',
-    paymentStatus: 'pago',
-    paymentMethod: 'PIX',
-    notes: 'Serviço finalizado com sucesso. Cliente avaliou 5 estrelas.',
-    assemblerId: 'a1',
-    assemblerName: 'Rodrigo Silva',
-    createdAt: '2026-09-01T10:00:00Z'
-  },
-  {
-    id: 's2',
-    clientId: 'c3',
-    clientName: 'Carlos Alberto Souza',
-    clientPhone: '11977665544',
-    clientAddress: 'Rua Voluntários da Pátria, 1200 - Santana, SP',
-    date: '2026-09-08',
-    time: '13:30',
-    description: 'Montagem Mesa de Jantar 6 cadeiras + Buffet',
-    serviceType: 'Montagem',
-    value: 220.00,
-    travelFee: 0.00,
-    cost: 0.00,
-    status: 'concluido',
-    paymentStatus: 'pago',
-    paymentMethod: 'Dinheiro',
-    notes: 'Cliente pagou em espécie ao término.',
-    assemblerId: 'a1',
-    assemblerName: 'Rodrigo Silva',
-    createdAt: '2026-09-02T12:00:00Z'
-  },
-  {
-    id: 's3',
-    clientId: 'c1',
-    clientName: 'Eder',
-    clientPhone: '11991234567',
-    clientAddress: 'Av. Paulista, 1000 - Apto 42, Bela Vista, SP',
-    date: '2026-09-09',
-    time: '10:00',
-    description: 'Reparo e regulagem gavetas e dobradiças guarda-roupa',
-    serviceType: 'Reparo',
-    value: 90.00,
-    travelFee: 20.00,
-    cost: 30.00,
-    status: 'agendado',
-    paymentStatus: 'pendente',
-    paymentMethod: 'PIX',
-    notes: 'Levar parafusos adicionais e corrediças telescópicas de 40cm.',
-    assemblerId: 'a1',
-    assemblerName: 'Rodrigo Silva',
-    createdAt: '2026-09-05T14:30:00Z'
-  },
-  {
-    id: 's4',
-    clientId: 'c4',
-    clientName: 'Patrícia Lima (via Loja TokLar)',
-    clientPhone: '11966554433',
-    clientAddress: 'Rua Vergueiro, 2500 - Vila Mariana, SP',
-    date: '2026-09-12',
-    time: '14:00',
-    description: 'Montagem Quarto de Bebê Completo (Berço + Cômoda + Roupeiro)',
-    serviceType: 'Montagem',
-    storeId: 'st1',
-    value: 380.00,
-    travelFee: 40.00,
-    cost: 45.00,
-    status: 'agendado',
-    paymentStatus: 'pendente',
-    paymentMethod: 'PIX',
-    notes: 'Ordem de serviço entregue pela loja.',
-    assemblerId: 'a1',
-    assemblerName: 'Rodrigo Silva',
-    createdAt: '2026-09-06T16:00:00Z'
-  },
-  {
-    id: 's5',
-    clientId: 'c1',
-    clientName: 'Eder',
-    clientPhone: '11991234567',
-    clientAddress: 'Av. Paulista, 1000 - Apto 42, Bela Vista, SP',
-    date: '2026-09-16',
-    time: '11:00',
-    description: 'Instalação de Painel Ripado com Suporte TV articulado',
-    serviceType: 'Instalação',
-    value: 180.00,
-    travelFee: 0.00,
-    cost: 60.00,
-    status: 'agendado',
-    paymentStatus: 'pendente',
-    paymentMethod: 'Cartão de Crédito',
-    notes: 'Cliente quer passar no cartão.',
-    assemblerId: 'a1',
-    assemblerName: 'Rodrigo Silva',
-    createdAt: '2026-09-07T18:00:00Z'
-  }
-];
+// Agenda comeca vazia.
+const SEED_SERVICES = [];
 
-// Financial transactions (Receitas e Despesas)
-const SEED_TRANSACTIONS = [
-  {
-    id: 't1',
-    type: 'receita',
-    category: 'Montagem Particular',
-    description: 'Montagem Guarda-Roupa - Mariana Santos',
-    value: 350.00,
-    date: '2026-09-07',
-    paymentMethod: 'PIX',
-    status: 'pago',
-    serviceId: 's1',
-    createdAt: '2026-09-07T12:00:00Z'
-  },
-  {
-    id: 't2',
-    type: 'despesa',
-    category: 'Combustível',
-    description: 'Abastecimento Gasolina Moto/Carro',
-    value: 80.00,
-    date: '2026-09-07',
-    paymentMethod: 'Cartão Débito',
-    status: 'pago',
-    createdAt: '2026-09-07T08:30:00Z'
-  },
-  {
-    id: 't3',
-    type: 'receita',
-    category: 'Montagem Particular',
-    description: 'Montagem Mesa e Buffet - Carlos Alberto',
-    value: 220.00,
-    date: '2026-09-08',
-    paymentMethod: 'Dinheiro',
-    status: 'pago',
-    serviceId: 's2',
-    createdAt: '2026-09-08T16:00:00Z'
-  },
-  {
-    id: 't4',
-    type: 'despesa',
-    category: 'Ferramentas / Ferragens',
-    description: 'Jogo de Brocas, Parafusos e Buchas 8mm',
-    value: 65.00,
-    date: '2026-09-08',
-    paymentMethod: 'PIX',
-    status: 'pago',
-    createdAt: '2026-09-08T11:00:00Z'
-  },
-  {
-    id: 't5',
-    type: 'despesa',
-    category: 'Alimentação',
-    description: 'Almoço em trânsito',
-    value: 32.50,
-    date: '2026-09-08',
-    paymentMethod: 'Cartão Débito',
-    status: 'pago',
-    createdAt: '2026-09-08T13:00:00Z'
-  }
-];
+// Livro caixa comeca zerado.
+const SEED_TRANSACTIONS = [];
 
-// Lojas parceiras: agrupam as montagens repassadas por cada loja e permitem
-// emitir uma nota única somando todos os serviços do período.
-const SEED_STORES = [
-  {
-    id: 'st1',
-    name: 'Loja TokLar Móveis',
-    contactName: 'Setor de Entregas',
-    phone: '11966554433',
-    cnpj: '',
-    address: 'Rua do Gasômetro, 300 - Brás, São Paulo - SP',
-    notes: 'Repassa montagens semanais em domicílio.',
-    createdAt: '2026-08-15T14:00:00Z'
-  }
-];
+// Lojas parceiras: cadastradas por ele conforme fecha parceria.
+const SEED_STORES = [];
 
-// Montadores da equipe. O primeiro é o próprio dono, que também executa serviços.
-const SEED_ASSEMBLERS = [
-  {
-    id: 'a1',
-    name: 'Rodrigo Silva',
-    phone: '11987654321',
-    isOwner: true,
-    createdAt: '2026-08-01T09:00:00Z'
-  }
-];
+// Equipe: ele cadastra a si mesmo como dono e depois os montadores.
+const SEED_ASSEMBLERS = [];
 
 class StorageManager {
   constructor() {
@@ -433,6 +200,91 @@ class StorageManager {
         this.save(STORAGE_KEYS.SETTINGS, settings);
       }
     }
+
+    this.limparDadosDeDemonstracao();
+  }
+
+  /**
+   * Tira do ar os dados de exemplo que acompanhavam as primeiras versões.
+   *
+   * Esvaziar as sementes só resolve para quem instala agora: quem já abriu o
+   * sistema tem os exemplos gravados no aparelho e no Firestore. Esta limpeza
+   * roda uma vez e apaga exatamente os registros de exemplo, pelos ids que
+   * eles sempre tiveram — nada que o montador tenha cadastrado é tocado.
+   */
+  limparDadosDeDemonstracao() {
+    const settings = this.get(STORAGE_KEYS.SETTINGS) || {};
+    if (settings.demoRemovidaEm) return;
+
+    const DEMO = {
+      clientes: ['c1', 'c2', 'c3', 'c4'],
+      servicos: ['s1', 's2', 's3', 's4', 's5'],
+      lancamentos: ['t1', 't2', 't3', 't4', 't5'],
+      lojas: ['st1'],
+      montadores: ['a1']
+    };
+
+    const servicosDemo = new Set(DEMO.servicos);
+    let mexeu = false;
+
+    const clientes = this.get(STORAGE_KEYS.CUSTOMERS) || [];
+    const clientesLimpos = clientes.filter(c => !DEMO.clientes.includes(c.id));
+    if (clientesLimpos.length !== clientes.length) {
+      this.save(STORAGE_KEYS.CUSTOMERS, clientesLimpos);
+      mexeu = true;
+    }
+
+    const servicos = this.get(STORAGE_KEYS.SERVICES) || [];
+    const servicosLimpos = servicos.filter(s => !servicosDemo.has(s.id));
+    if (servicosLimpos.length !== servicos.length) {
+      this.save(STORAGE_KEYS.SERVICES, servicosLimpos);
+      mexeu = true;
+    }
+
+    // Além dos lançamentos de exemplo, saem também os que o próprio sistema
+    // gerou a partir dos serviços de exemplo (receita, material e repasse).
+    const lancamentos = this.get(STORAGE_KEYS.TRANSACTIONS) || [];
+    const lancamentosLimpos = lancamentos.filter(t =>
+      !DEMO.lancamentos.includes(t.id) && !servicosDemo.has(t.serviceId)
+    );
+    if (lancamentosLimpos.length !== lancamentos.length) {
+      this.save(STORAGE_KEYS.TRANSACTIONS, lancamentosLimpos);
+      mexeu = true;
+    }
+
+    const lojas = this.get(STORAGE_KEYS.STORES) || [];
+    const lojasLimpas = lojas.filter(l => !DEMO.lojas.includes(l.id));
+    if (lojasLimpas.length !== lojas.length) {
+      this.save(STORAGE_KEYS.STORES, lojasLimpas);
+      mexeu = true;
+    }
+
+    const montadores = this.get(STORAGE_KEYS.ASSEMBLERS) || [];
+    const montadoresLimpos = montadores.filter(m => !DEMO.montadores.includes(m.id));
+    if (montadoresLimpos.length !== montadores.length) {
+      this.save(STORAGE_KEYS.ASSEMBLERS, montadoresLimpos);
+      mexeu = true;
+    }
+
+    // Fotos que estivessem presas aos serviços de exemplo.
+    servicosDemo.forEach(id => {
+      try { localStorage.removeItem(`movelpro_fotos_${id}`); } catch (e) { /* ok */ }
+    });
+
+    // O perfil de exemplo (Rodrigo Silva e o PIX fictício) sai junto, mas só
+    // se ainda estiver intocado — se ele já preencheu o próprio, fica o dele.
+    const perfilDeExemplo = { montadorName: 'Rodrigo Silva', phone: '11987654321', pixKey: '11987654321' };
+    Object.entries(perfilDeExemplo).forEach(([campo, valorDeExemplo]) => {
+      if (settings[campo] === valorDeExemplo) {
+        settings[campo] = '';
+        mexeu = true;
+      }
+    });
+
+    settings.demoRemovidaEm = new Date().toISOString();
+    this.save(STORAGE_KEYS.SETTINGS, settings);
+
+    if (mexeu) console.info('[dados] Registros de demonstração removidos.');
   }
 
   get(key) {
@@ -704,6 +556,11 @@ class StorageManager {
         }
       }
 
+      // A nuvem pode devolver os exemplos que a limpeza do boot tirou daqui —
+      // naquele momento ainda não havia login, então a remoção não subiu.
+      // Agora, autenticado, a limpeza roda de novo e vai junto para o Firestore.
+      this.limparDadosDeDemonstracao();
+
       if (hasUpdates && window.app) {
         window.app.updateAllViews();
         window.app.showToast('Dados sincronizados com a nuvem.', 'info');
@@ -752,14 +609,26 @@ class StorageManager {
     }
   }
 
-  resetToDefault() {
-    localStorage.removeItem(STORAGE_KEYS.SETTINGS);
-    localStorage.removeItem(STORAGE_KEYS.CUSTOMERS);
-    localStorage.removeItem(STORAGE_KEYS.SERVICES);
-    localStorage.removeItem(STORAGE_KEYS.TRANSACTIONS);
-    localStorage.removeItem(STORAGE_KEYS.STORES);
-    localStorage.removeItem(STORAGE_KEYS.ASSEMBLERS);
-    this.init();
+  /**
+   * Zera a agenda, os clientes, o financeiro, as lojas e a equipe — no
+   * aparelho e na nuvem. As configurações do perfil (nome, PIX, logo, tabela
+   * de preços) continuam, porque apagá-las obrigaria a recadastrar tudo.
+   */
+  apagarTudo() {
+    // As fotos saem primeiro, senão ficam ocupando espaço sem serviço dono.
+    for (let i = localStorage.length - 1; i >= 0; i--) {
+      const chave = localStorage.key(i);
+      if (chave && chave.startsWith('movelpro_fotos_')) localStorage.removeItem(chave);
+    }
+
+    this.saveServices([]);
+    this.saveTransactions([]);
+    this.saveCustomers([]);
+    this.saveStores([]);
+    this.saveAssemblers([]);
+
+    // Sobe agora, sem esperar os 2,5 s de agrupamento: a tela vai recarregar.
+    this.enviarPendentes();
   }
 }
 

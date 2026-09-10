@@ -459,11 +459,17 @@ class App {
     const resetBtn = document.getElementById('btn-reset-data');
     if (resetBtn) {
       resetBtn.addEventListener('click', () => {
-        if (confirm('Tem certeza? Isso restaurará os dados de demonstração originais.')) {
-          window.storageManager.resetToDefault();
-          this.showToast('Dados restaurados para o padrão de demonstração!', 'success');
-          setTimeout(() => window.location.reload(), 1000);
-        }
+        // Duas confirmações: some com o histórico inteiro, inclusive na nuvem.
+        if (!confirm(
+          'Apagar TODAS as montagens, clientes, lançamentos, lojas, montadores e fotos?\n\n' +
+          'Isso vale também para a nuvem e não tem como desfazer.'
+        )) return;
+
+        if (!confirm('Última confirmação: você já baixou o backup?')) return;
+
+        window.storageManager.apagarTudo();
+        this.showToast('Tudo apagado. O sistema está zerado.', 'success');
+        setTimeout(() => window.location.reload(), 1200);
       });
     }
   }

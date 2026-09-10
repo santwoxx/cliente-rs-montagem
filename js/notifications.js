@@ -342,7 +342,7 @@ class NotificationsController {
         }
         this.enviar(
           'Assim que vai chegar',
-          'Montagem em 30 min\n14:00h — Eder Oliveira\nAv. Paulista, 1000',
+          'Montagem em 30 min\n14:00h — nome do cliente\nendereço da montagem',
           'rs-teste'
         );
       });

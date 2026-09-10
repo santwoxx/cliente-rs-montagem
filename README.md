@@ -253,3 +253,35 @@ Duas providências foram tomadas para não estourar a cota:
 **O que custaria dinheiro** (e por isso não foi feito): notificação push garantida com o app
 fechado precisaria de um agendador — Vercel Cron no plano Hobby só roda 1× por dia, e rodar de
 10 em 10 minutos exigiria o Vercel Pro (~US$ 20/mês) ou um cron externo gratuito.
+
+---
+
+## 🆕 Primeiro acesso do montador
+
+O sistema é entregue **vazio**: sem clientes, sem agenda, sem lançamentos, sem lojas e sem
+equipe. Os dados de exemplo que acompanhavam as primeiras versões (Rodrigo Silva, Mariana
+Santos, Loja TokLar, o histórico de setembro) foram removidos, e quem já tinha aberto o
+sistema tem esses registros apagados sozinho na primeira vez que abrir esta versão —
+**pelos ids fixos que eles sempre tiveram, então nada que ele já cadastrou é tocado.**
+
+A limpeza roda duas vezes de propósito: no boot, para o aparelho, e logo depois do login,
+quando o Firestore já respondeu — senão a nuvem devolveria os exemplos que acabaram de sair.
+
+Ordem sugerida para começar:
+
+1. **Ajustes ▸ Dados do Montador** — nome, WhatsApp, CNPJ e a **chave PIX** (ela vai impressa
+   na nota que o cliente final recebe, então não pode ficar em branco).
+2. **Ajustes ▸ Logo** — a logo aparece no topo da nota de serviço.
+3. **Montadores** — cadastre-se como montador marcando *"Sou eu (dono da empresa)"*.
+4. **Ajustes ▸ Meta de Faturamento** — vem em R$ 5.000 por padrão.
+5. **Orçamentos ▸ tabela de preços** — já vem preenchida com valores de referência por tipo
+   de móvel; ajuste para os preços dele.
+
+Continua vindo pronto: os **tipos de serviço** (Montagem, Instalação, Reparo…) e a
+**tabela de preços**. São ponto de partida editável, não dados de exemplo.
+
+### Recomeçar do zero
+
+**Ajustes ▸ Recomeçar do zero** apaga todas as montagens, clientes, lançamentos, lojas,
+montadores e fotos — no aparelho **e na nuvem**, com dupla confirmação. O perfil, a chave PIX,
+a logo e a tabela de preços continuam. Não há como desfazer: baixe o backup antes.
