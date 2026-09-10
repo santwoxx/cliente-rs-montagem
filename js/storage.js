@@ -102,6 +102,10 @@ class StorageManager {
     this.LIMITE_ALERTA_BYTES = 750 * 1024;
     this.avisosDeTamanho = new Set();
 
+    // Inscrições ativas do Firestore onSnapshot para sincronização em tempo real
+    this.unsubscribers = [];
+    this.storageListenerAtivo = false;
+
     this.init();
     this.protegerContraFechamento();
   }
@@ -356,9 +360,9 @@ class StorageManager {
     return this.get(STORAGE_KEYS.SERVICES) || [];
   }
 
-  saveServices(services) {
+  saveServices(services, immediate = true) {
     const res = this.save(STORAGE_KEYS.SERVICES, services);
-    this.syncToFirestore('services', services);
+    this.syncToFirestore('services', services, immediate);
     return res;
   }
 
@@ -366,9 +370,9 @@ class StorageManager {
     return this.get(STORAGE_KEYS.TRANSACTIONS) || [];
   }
 
-  saveTransactions(transactions) {
+  saveTransactions(transactions, immediate = true) {
     const res = this.save(STORAGE_KEYS.TRANSACTIONS, transactions);
-    this.syncToFirestore('transactions', transactions);
+    this.syncToFirestore('transactions', transactions, immediate);
     return res;
   }
 
@@ -376,9 +380,9 @@ class StorageManager {
     return this.get(STORAGE_KEYS.CUSTOMERS) || [];
   }
 
-  saveCustomers(customers) {
+  saveCustomers(customers, immediate = true) {
     const res = this.save(STORAGE_KEYS.CUSTOMERS, customers);
-    this.syncToFirestore('customers', customers);
+    this.syncToFirestore('customers', customers, immediate);
     return res;
   }
 
@@ -386,9 +390,9 @@ class StorageManager {
     return this.get(STORAGE_KEYS.STORES) || [];
   }
 
-  saveStores(stores) {
+  saveStores(stores, immediate = true) {
     const res = this.save(STORAGE_KEYS.STORES, stores);
-    this.syncToFirestore('stores', stores);
+    this.syncToFirestore('stores', stores, immediate);
     return res;
   }
 
@@ -396,9 +400,9 @@ class StorageManager {
     return this.get(STORAGE_KEYS.ASSEMBLERS) || [];
   }
 
-  saveAssemblers(assemblers) {
+  saveAssemblers(assemblers, immediate = true) {
     const res = this.save(STORAGE_KEYS.ASSEMBLERS, assemblers);
-    this.syncToFirestore('assemblers', assemblers);
+    this.syncToFirestore('assemblers', assemblers, immediate);
     return res;
   }
 
@@ -406,27 +410,28 @@ class StorageManager {
     return this.get(STORAGE_KEYS.SETTINGS) || DEFAULT_SETTINGS;
   }
 
-  saveSettings(settings) {
+  saveSettings(settings, immediate = true) {
     const res = this.save(STORAGE_KEYS.SETTINGS, settings);
-    this.syncToFirestore('settings', settings);
+    this.syncToFirestore('settings', settings, immediate);
     return res;
   }
 
   // Cloud Firestore Sync Helpers
 
   /**
-   * Agenda o envio em vez de disparar na hora.
-   *
-   * Concluir uma montagem grava serviço + receita + despesa de material +
-   * repasse do montador: eram 4 gravações na nuvem em menos de um segundo,
-   * cada uma subindo a base inteira. Agora as alterações se acumulam por
-   * alguns segundos e sobem de uma vez — menos espera no celular e menos
-   * operações contra a cota gratuita do Firebase.
+   * Envia os dados para a nuvem. Por padrão alterações operacionais importantes
+   * (serviços, clientes, etc.) sobem imediatamente para sincronizar na hora com
+   * outros aparelhos. Modificações em lote podem usar atraso agrupado.
    */
-  syncToFirestore(collectionKey, data) {
+  syncToFirestore(collectionKey, data, immediate = false) {
     if (!window.firestoreDb || !window.firebaseAuth || !window.firebaseAuth.currentUser) return;
 
     this.pendentesNuvem[collectionKey] = data;
+
+    if (immediate) {
+      this.enviarPendentes();
+      return;
+    }
 
     if (this.timerNuvem) clearTimeout(this.timerNuvem);
     this.timerNuvem = setTimeout(() => this.enviarPendentes(), this.ATRASO_NUVEM_MS);
@@ -567,6 +572,120 @@ class StorageManager {
       }
     } catch (e) {
       console.warn('Erro ao sincronizar do Firestore:', e.message);
+    }
+  }
+
+  /**
+   * Escuta em tempo real todas as alterações na nuvem via Firestore onSnapshot.
+   * Toda vez que qualquer usuário cadastrar, alterar ou excluir um serviço, cliente,
+   * financeiro, loja ou montador, todos os outros aparelhos conectados atualizam
+   * a tela automaticamente, na mesma hora, mesmo sem recarregar a página.
+   */
+  iniciarEscutaEmTempoReal() {
+    if (!window.firestoreDb || !window.firebaseAuth) return;
+
+    this.pararEscutaEmTempoReal();
+    this.unsubscribers = [];
+
+    const colecoes = ['services', 'customers', 'transactions', 'settings', 'stores', 'assemblers'];
+
+    colecoes.forEach((col) => {
+      const storageKey = STORAGE_KEYS[col.toUpperCase()];
+      if (!storageKey) return;
+
+      try {
+        const unsub = window.firestoreDb.collection('app_data').doc(col)
+          .onSnapshot((docSnapshot) => {
+            // Ignora escritas que foram geradas localmente e ainda aguardam confirmação do servidor
+            if (docSnapshot.metadata && docSnapshot.metadata.hasPendingWrites) {
+              return;
+            }
+
+            if (!docSnapshot.exists) return;
+
+            const payload = docSnapshot.data();
+            if (!payload || payload.data === undefined) return;
+
+            const dadosNuvem = payload.data;
+            const dadosAtuais = this.get(storageKey);
+
+            // Compara para saber se houve real alteração nos dados
+            const strNuvem = JSON.stringify(dadosNuvem);
+            const strAtual = JSON.stringify(dadosAtuais);
+
+            if (strNuvem !== strAtual) {
+              console.log(`[TempoReal] Atualização recebida da nuvem para: ${col}`);
+
+              // Salva no cache local e no localStorage
+              this.save(storageKey, dadosNuvem);
+
+              // Atualiza todas as visualizações do app
+              if (window.app && window.app.updateAllViews) {
+                window.app.updateAllViews();
+              }
+              if (window.calendarController && window.calendarController.render) {
+                window.calendarController.render();
+                if (window.calendarController.selectedDate) {
+                  window.calendarController.renderDayServices(window.calendarController.selectedDate);
+                }
+              }
+
+              // Se a alteração veio de outro usuário, exibe aviso suave
+              const eu = window.firebaseAuth.currentUser ? (window.firebaseAuth.currentUser.email || '').toLowerCase() : '';
+              const quemAtualizou = (payload.updatedBy || '').toLowerCase();
+              if (quemAtualizou && quemAtualizou !== eu && window.app && window.app.showToast) {
+                const nomes = {
+                  services: 'Agenda de montagens',
+                  customers: 'Cadastro de clientes',
+                  transactions: 'Financeiro',
+                  stores: 'Lojas parceiras',
+                  assemblers: 'Equipe de montadores',
+                  settings: 'Configurações'
+                };
+                window.app.showToast(`${nomes[col] || 'Dados'} atualizado(s) em tempo real!`, 'info');
+              }
+            }
+          }, (erro) => {
+            console.warn(`[TempoReal] Aviso ao escutar ${col}:`, erro.message);
+          });
+
+        this.unsubscribers.push(unsub);
+      } catch (e) {
+        console.warn(`[TempoReal] Falha ao iniciar escuta de ${col}:`, e.message);
+      }
+    });
+
+    // Sincronização entre abas abertas no mesmo navegador
+    if (!this.storageListenerAtivo) {
+      window.addEventListener('storage', (e) => {
+        if (Object.values(STORAGE_KEYS).includes(e.key)) {
+          delete this.cache[e.key];
+          if (e.key === STORAGE_KEYS.SERVICES) {
+            this.indices = {};
+          }
+          if (window.app && window.app.updateAllViews) {
+            window.app.updateAllViews();
+          }
+          if (window.calendarController && window.calendarController.render) {
+            window.calendarController.render();
+            if (window.calendarController.selectedDate) {
+              window.calendarController.renderDayServices(window.calendarController.selectedDate);
+            }
+          }
+        }
+      });
+      this.storageListenerAtivo = true;
+    }
+  }
+
+  pararEscutaEmTempoReal() {
+    if (this.unsubscribers && this.unsubscribers.length > 0) {
+      this.unsubscribers.forEach((unsub) => {
+        try {
+          if (typeof unsub === 'function') unsub();
+        } catch (e) {}
+      });
+      this.unsubscribers = [];
     }
   }
 

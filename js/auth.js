@@ -142,6 +142,9 @@ class AuthController {
       } else {
         this.currentUser = null;
         this.isAdmin = false;
+        if (window.storageManager && window.storageManager.pararEscutaEmTempoReal) {
+          window.storageManager.pararEscutaEmTempoReal();
+        }
         this.showLoginScreen();
       }
     });
@@ -242,6 +245,9 @@ class AuthController {
 
   async handleLogout() {
     if (confirm('Deseja realmente sair da sua conta?')) {
+      if (window.storageManager && window.storageManager.pararEscutaEmTempoReal) {
+        window.storageManager.pararEscutaEmTempoReal();
+      }
       if (window.firebaseAuth) {
         await window.firebaseAuth.signOut();
       }
@@ -271,9 +277,14 @@ class AuthController {
     // Apply UI role permissions
     this.applyRolePermissions(isAdmin);
 
-    // Sync cloud data with Firestore
-    if (window.storageManager && window.storageManager.syncFromFirestore) {
-      window.storageManager.syncFromFirestore();
+    // Sync cloud data with Firestore and start real-time listener
+    if (window.storageManager) {
+      if (window.storageManager.syncFromFirestore) {
+        window.storageManager.syncFromFirestore();
+      }
+      if (window.storageManager.iniciarEscutaEmTempoReal) {
+        window.storageManager.iniciarEscutaEmTempoReal();
+      }
     }
 
     // Load team list for admins

@@ -56,9 +56,38 @@ class PWAController {
         });
       });
 
-      // Procura atualização toda vez que o app volta para a frente.
+      // Atualização automática quando o novo Service Worker assumir o controle
+      let recarregando = false;
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (recarregando) return;
+        recarregando = true;
+        const modalAberto = document.querySelector('.modal-overlay.active');
+        if (!modalAberto) {
+          window.location.reload();
+        } else {
+          if (window.app && window.app.showToast) {
+            window.app.showToast('Nova versão do sistema pronta! Atualizando...', 'info');
+          }
+          setTimeout(() => { window.location.reload(); }, 2500);
+        }
+      });
+
+      // Checa por atualizações a cada 2 minutos em segundo plano
+      setInterval(() => {
+        if (this.registro) {
+          this.registro.update().catch(() => {});
+        }
+      }, 120000);
+
+      // Procura atualização toda vez que o app volta para a frente ou ganha foco
       document.addEventListener('visibilitychange', () => {
         if (document.visibilityState === 'visible' && this.registro) {
+          this.registro.update().catch(() => {});
+        }
+      });
+
+      window.addEventListener('focus', () => {
+        if (this.registro) {
           this.registro.update().catch(() => {});
         }
       });
