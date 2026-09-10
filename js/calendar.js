@@ -162,14 +162,19 @@ class CalendarController {
       headerCount.textContent = `${dayServices.length} serviço${dayServices.length === 1 ? '' : 's'}`;
     }
 
+    const auth = window.authController;
+    const podeVerCheio = !auth || auth.podeVerValoresCheios();
+
     if (dayServices.length === 0) {
       container.innerHTML = `
         <div class="empty-day-state">
           <i class="fa-regular fa-calendar-xmark"></i>
           <p>Nenhum serviço agendado para este dia.</p>
-          <button class="btn btn-primary btn-sm" onclick="window.servicesController.openNewServiceModal('${dateKey}')">
-            <i class="fa-solid fa-plus"></i> Agendar neste dia
-          </button>
+          ${podeVerCheio ? `
+            <button class="btn btn-primary btn-sm" onclick="window.servicesController.openNewServiceModal('${dateKey}')">
+              <i class="fa-solid fa-plus"></i> Agendar neste dia
+            </button>
+          ` : ''}
         </div>
       `;
       return;

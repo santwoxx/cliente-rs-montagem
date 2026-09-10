@@ -401,6 +401,12 @@ class QuotesController {
   }
 
   convertQuoteToService() {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode agendar serviços.', 'warning');
+      return;
+    }
+
     const summary = this.calculateSummary();
     if (summary.total <= 0 && summary.items.length === 0) {
       window.app.showToast('Selecione ao menos um item ou defina um valor.', 'danger');
@@ -428,6 +434,12 @@ class QuotesController {
   }
 
   generateReceiptFromService(serviceId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode gerar notas de serviço.', 'warning');
+      return;
+    }
+
     const services = window.storageManager.getServices();
     const service = services.find(s => s.id === serviceId);
     if (!service) return;

@@ -71,6 +71,16 @@ class App {
   }
 
   navigateTo(viewId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      const adminViews = ['view-financeiro', 'view-ajustes', 'view-orcamentos', 'view-montadores', 'view-lojas'];
+      if (adminViews.includes(viewId)) {
+        this.navigateTo('view-agenda');
+        this.showToast('Esta área é de acesso exclusivo do administrador.', 'warning');
+        return;
+      }
+    }
+
     this.currentView = viewId;
 
     // Toggle view elements
@@ -142,6 +152,11 @@ class App {
     const fabBtn = document.getElementById('global-fab-btn');
     if (fabBtn) {
       fabBtn.addEventListener('click', () => {
+        const auth = window.authController;
+        if (auth && !auth.podeVerValoresCheios()) {
+          return;
+        }
+
         if (this.currentView === 'view-financeiro') {
           window.financeController.openTransactionModal('receita');
         } else if (this.currentView === 'view-clientes') {
@@ -249,9 +264,11 @@ class App {
           <div class="empty-day-state">
             <i class="fa-regular fa-calendar-check"></i>
             <p>Nenhuma montagem agendada para hoje.</p>
-            <button class="btn btn-primary btn-sm" onclick="window.servicesController.openNewServiceModal('${todayStr}')">
-              <i class="fa-solid fa-plus"></i> Agendar para hoje
-            </button>
+            ${ehAdmin ? `
+              <button class="btn btn-primary btn-sm" onclick="window.servicesController.openNewServiceModal('${todayStr}')">
+                <i class="fa-solid fa-plus"></i> Agendar para hoje
+              </button>
+            ` : ''}
           </div>
         `;
       } else {

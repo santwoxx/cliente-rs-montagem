@@ -71,7 +71,7 @@
           <i class="fa-regular fa-calendar-days"></i>
           <span>Agenda</span>
         </button>
-        <button class="nav-item" data-view-target="view-financeiro">
+        <button class="nav-item" data-view-target="view-financeiro" data-admin-only="true">
           <i class="fa-solid fa-wallet"></i>
           <span>Financeiro</span>
         </button>
@@ -87,11 +87,11 @@
           <i class="fa-solid fa-store"></i>
           <span>Lojas</span>
         </button>
-        <button class="nav-item" data-view-target="view-orcamentos">
+        <button class="nav-item" data-view-target="view-orcamentos" data-admin-only="true">
           <i class="fa-solid fa-calculator"></i>
           <span>Orçamentos</span>
         </button>
-        <button class="nav-item" data-view-target="view-ajustes">
+        <button class="nav-item" data-view-target="view-ajustes" data-admin-only="true">
           <i class="fa-solid fa-gear"></i>
           <span>Ajustes</span>
         </button>
@@ -126,7 +126,7 @@
           <div class="quick-stats-pill" id="header-quick-stat">
             <span class="dot"></span> Carregando resumo...
           </div>
-          <button class="btn btn-primary btn-sm" onclick="window.servicesController.openNewServiceModal(window.calendarController.selectedDate)">
+          <button class="btn btn-primary btn-sm" onclick="window.servicesController.openNewServiceModal(window.calendarController.selectedDate)" data-admin-only="true">
             <i class="fa-solid fa-plus"></i> Novo Serviço
           </button>
           <button class="btn btn-outline btn-sm btn-logout-trigger" title="Sair da Conta">
@@ -204,7 +204,7 @@
             </div>
 
             <!-- Quick Shortcuts & Monthly Goal -->
-            <div>
+            <div data-admin-only="true">
               <div class="card" style="margin-bottom: 24px;">
                 <div class="card-header">
                   <h3 class="card-title"><i class="fa-solid fa-bullseye"></i> Meta Financeira do Mês</h3>
@@ -438,7 +438,7 @@
             </div>
             <div style="display: flex; align-items: center; gap: 12px;">
               <span class="badge badge-concluido" id="customer-count-badge">0 cadastrados</span>
-              <button class="btn btn-primary btn-sm" onclick="window.customersController.openCustomerModal()">
+              <button class="btn btn-primary btn-sm" onclick="window.customersController.openCustomerModal()" data-admin-only="true">
                 <i class="fa-solid fa-user-plus"></i> Novo Cliente
               </button>
             </div>
@@ -932,7 +932,7 @@
     </main>
 
     <!-- Floating Action Button (FAB) -->
-    <button class="fab-btn" id="global-fab-btn" title="Nova Montagem / Lançamento">
+    <button class="fab-btn" id="global-fab-btn" title="Nova Montagem / Lançamento" data-admin-only="true">
       <i class="fa-solid fa-plus"></i>
     </button>
 
@@ -957,31 +957,31 @@
             <span>Clientes</span>
           </button>
         </li>
-        <li>
+        <li data-admin-only="true">
           <button class="bottom-nav-item" data-view-target="view-financeiro">
             <i class="fa-solid fa-wallet"></i>
             <span>Financeiro</span>
           </button>
         </li>
-        <li>
+        <li data-admin-only="true">
           <button class="bottom-nav-item" data-view-target="view-montadores" data-admin-only="true">
             <i class="fa-solid fa-helmet-safety"></i>
             <span>Montadores</span>
           </button>
         </li>
-        <li>
+        <li data-admin-only="true">
           <button class="bottom-nav-item" data-view-target="view-lojas" data-admin-only="true">
             <i class="fa-solid fa-store"></i>
             <span>Lojas</span>
           </button>
         </li>
-        <li>
+        <li data-admin-only="true">
           <button class="bottom-nav-item" data-view-target="view-orcamentos">
             <i class="fa-solid fa-calculator"></i>
             <span>Orçar</span>
           </button>
         </li>
-        <li>
+        <li data-admin-only="true">
           <button class="bottom-nav-item" data-view-target="view-ajustes">
             <i class="fa-solid fa-gear"></i>
             <span>Ajustes</span>

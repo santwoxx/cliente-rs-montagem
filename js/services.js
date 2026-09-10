@@ -200,6 +200,12 @@ class ServicesController {
   }
 
   openNewServiceModal(defaultDate = null) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode agendar novos serviços.', 'warning');
+      return;
+    }
+
     this.currentEditingId = null;
     const form = document.getElementById('service-form');
     if (form) form.reset();
@@ -721,6 +727,9 @@ class ServicesController {
     const modalBody = document.getElementById('service-detail-body');
     if (!modalBody) return;
 
+    const auth = window.authController;
+    const ehAdmin = !auth || auth.podeVerValoresCheios();
+
     const esc = (v) => Utils.escapeHtml(v);
     const idArg = Utils.escapeJsString(service.id);
 
@@ -811,15 +820,17 @@ class ServicesController {
         </div>
       ` : ''}
 
-      <span class="detail-section-label">Nota de serviço</span>
-      <div class="detail-actions">
-        <button class="btn btn-primary btn-sm" onclick="window.quotesController.generateReceiptFromService('${idArg}')">
-          <i class="fa-solid fa-file-pdf"></i> Gerar PDF
-        </button>
-        <button class="btn btn-whatsapp btn-sm" onclick="window.servicesController.sendReceiptToClient('${idArg}')" ${phone ? '' : 'disabled title="Cadastre o telefone do cliente"'}>
-          <i class="fa-brands fa-whatsapp"></i> Enviar nota ao cliente
-        </button>
-      </div>
+      ${ehAdmin ? `
+        <span class="detail-section-label">Nota de serviço</span>
+        <div class="detail-actions">
+          <button class="btn btn-primary btn-sm" onclick="window.quotesController.generateReceiptFromService('${idArg}')">
+            <i class="fa-solid fa-file-pdf"></i> Gerar PDF
+          </button>
+          <button class="btn btn-whatsapp btn-sm" onclick="window.servicesController.sendReceiptToClient('${idArg}')" ${phone ? '' : 'disabled title="Cadastre o telefone do cliente"'}>
+            <i class="fa-brands fa-whatsapp"></i> Enviar nota ao cliente
+          </button>
+        </div>
+      ` : ''}
 
       <span class="detail-section-label">Mensagens para o cliente</span>
       <div class="msg-list">
@@ -832,14 +843,16 @@ class ServicesController {
             </span>
             <i class="fa-solid fa-chevron-right msg-arrow"></i>
           </button>
-          <button class="msg-item" onclick="window.servicesController.sendMessage('${idArg}', 'pix')">
-            <span class="msg-icon icon-green"><i class="fa-solid fa-money-check-dollar"></i></span>
-            <span class="msg-text">
-              <strong>Enviar dados do PIX</strong>
-              <small>${settings.pixKey ? 'Chave PIX configurada' : 'Cadastre a chave em Ajustes'}</small>
-            </span>
-            <i class="fa-solid fa-chevron-right msg-arrow"></i>
-          </button>
+          ${ehAdmin ? `
+            <button class="msg-item" onclick="window.servicesController.sendMessage('${idArg}', 'pix')">
+              <span class="msg-icon icon-green"><i class="fa-solid fa-money-check-dollar"></i></span>
+              <span class="msg-text">
+                <strong>Enviar dados do PIX</strong>
+                <small>${settings.pixKey ? 'Chave PIX configurada' : 'Cadastre a chave em Ajustes'}</small>
+              </span>
+              <i class="fa-solid fa-chevron-right msg-arrow"></i>
+            </button>
+          ` : ''}
           <button class="msg-item" onclick="window.servicesController.sendMessage('${idArg}', 'avaliacao')">
             <span class="msg-icon icon-orange"><i class="fa-regular fa-star"></i></span>
             <span class="msg-text">
@@ -898,14 +911,16 @@ class ServicesController {
         </button>
       </div>
 
-      <div class="detail-footer">
-        <button class="btn btn-danger btn-sm" onclick="window.servicesController.deleteService('${idArg}')">
-          <i class="fa-solid fa-trash"></i> Excluir
-        </button>
-        <button class="btn btn-outline btn-sm" onclick="window.servicesController.editService('${idArg}')">
-          <i class="fa-solid fa-pen-to-square"></i> Editar
-        </button>
-      </div>
+      ${ehAdmin ? `
+        <div class="detail-footer">
+          <button class="btn btn-danger btn-sm" onclick="window.servicesController.deleteService('${idArg}')">
+            <i class="fa-solid fa-trash"></i> Excluir
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="window.servicesController.editService('${idArg}')">
+            <i class="fa-solid fa-pen-to-square"></i> Editar
+          </button>
+        </div>
+      ` : ''}
     `;
 
     window.app.openModal('service-detail-modal');
@@ -929,6 +944,14 @@ class ServicesController {
     const service = window.storageManager.getServices().find(s => s.id === serviceId);
     if (!service) return;
 
+    const auth = window.authController;
+    const ehAdmin = !auth || auth.podeVerValoresCheios();
+
+    if (tipo === 'pix' && !ehAdmin) {
+      window.app.showToast('Apenas o administrador pode enviar dados de cobrança.', 'warning');
+      return;
+    }
+
     const settings = window.storageManager.getSettings();
     const empresa = settings.companyName || 'RS Montagens';
     const nome = service.clientName || 'tudo bem';
@@ -938,7 +961,7 @@ class ServicesController {
       msg = `Olá ${nome}! Este é a ${empresa} confirmando seu agendamento.\n\n`
           + `Serviço: ${service.serviceType || 'Montagem'}\n`
           + `Data: ${Utils.formatDateBR(service.date)} às ${service.time}\n`
-          + `Valor: ${Utils.formatBRL(Utils.serviceTotal(service))}\n\n`
+          + (ehAdmin ? `Valor: ${Utils.formatBRL(Utils.serviceTotal(service))}\n\n` : '\n')
           + `Qualquer dúvida, estou à disposição. Até logo!`;
 
     } else if (tipo === 'pix') {
@@ -1039,6 +1062,12 @@ class ServicesController {
 
   /** Envia a nota de serviço direto na conversa do cliente. */
   sendReceiptToClient(serviceId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode enviar notas de serviço.', 'warning');
+      return;
+    }
+
     const service = window.storageManager.getServices().find(s => s.id === serviceId);
     if (!service) return;
 
@@ -1090,6 +1119,12 @@ class ServicesController {
   }
 
   editService(serviceId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode editar montagens.', 'warning');
+      return;
+    }
+
     const services = window.storageManager.getServices();
     const s = services.find(item => item.id === serviceId);
     if (!s) return;
@@ -1138,6 +1173,12 @@ class ServicesController {
   }
 
   deleteService(serviceId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode excluir montagens.', 'warning');
+      return;
+    }
+
     if (!confirm('Tem certeza que deseja excluir esta montagem da sua agenda?')) return;
 
     let services = window.storageManager.getServices();

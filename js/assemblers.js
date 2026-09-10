@@ -90,6 +90,12 @@ class AssemblersController {
   }
 
   openAssemblerModal(assemblerId = null) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode gerenciar a equipe de montadores.', 'warning');
+      return;
+    }
+
     this.currentEditingId = assemblerId;
     const form = document.getElementById('assembler-form');
     if (form) form.reset();
@@ -230,6 +236,12 @@ class AssemblersController {
   }
 
   deleteAssembler(assemblerId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode remover montadores da equipe.', 'warning');
+      return;
+    }
+
     const services = window.storageManager.getServices().filter(s => s.assemblerId === assemblerId);
     const aviso = services.length
       ? `Este montador tem ${services.length} montagem(ns) no histórico. Elas continuarão na agenda, mas ficarão sem responsável. Excluir mesmo assim?`
@@ -462,14 +474,16 @@ class AssemblersController {
           <h3 class="card-title">
             <i class="fa-solid fa-clipboard-list"></i> Montagens de ${esc(assembler.name)}
           </h3>
-          <div class="detail-actions" style="margin: 0;">
-            <button class="btn btn-outline btn-sm" onclick="window.assemblersController.openAssemblerModal('${idArg}')">
-              <i class="fa-solid fa-pen"></i> Editar
-            </button>
-            <button class="btn btn-outline btn-sm" onclick="window.assemblersController.deleteAssembler('${idArg}')">
-              <i class="fa-solid fa-trash" style="color: var(--danger);"></i> Excluir
-            </button>
-          </div>
+          ${ehAdmin ? `
+            <div class="detail-actions" style="margin: 0;">
+              <button class="btn btn-outline btn-sm" onclick="window.assemblersController.openAssemblerModal('${idArg}')">
+                <i class="fa-solid fa-pen"></i> Editar
+              </button>
+              <button class="btn btn-outline btn-sm" onclick="window.assemblersController.deleteAssembler('${idArg}')">
+                <i class="fa-solid fa-trash" style="color: var(--danger);"></i> Excluir
+              </button>
+            </div>
+          ` : ''}
         </div>
 
         ${services.length === 0 ? `

@@ -68,6 +68,12 @@ class CustomersController {
   }
 
   openCustomerModal(customerId = null) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode cadastrar ou editar clientes.', 'warning');
+      return;
+    }
+
     this.currentEditingId = customerId;
     const form = document.getElementById('customer-form');
     if (form) form.reset();
@@ -141,6 +147,12 @@ class CustomersController {
   }
 
   deleteCustomer(customerId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode excluir clientes.', 'warning');
+      return;
+    }
+
     if (!confirm('Deseja excluir este cliente?')) return;
     let customers = window.storageManager.getCustomers();
     customers = customers.filter(c => c.id !== customerId);
@@ -184,6 +196,10 @@ class CustomersController {
     const body = document.getElementById('customer-detail-body');
     if (!body) return;
 
+    const auth = window.authController;
+    const ehAdmin = !auth || auth.podeVerValoresCheios();
+    const meuId = auth ? auth.getCurrentAssemblerId() : null;
+
     const esc = (v) => Utils.escapeHtml(v);
     const idArg = Utils.escapeJsString(customer.id);
 
@@ -199,20 +215,21 @@ class CustomersController {
       .reduce((sum, s) => sum + Utils.serviceProfit(s), 0);
     const concluidos = services.filter(s => s.status === 'concluido').length;
 
+    // Ganhos do montador logado com este cliente
+    const meusGanhosCliente = services
+      .filter(s => s.assemblerId === meuId && s.status === 'concluido')
+      .reduce((sum, s) => sum + Utils.assemblerPay(s), 0);
+
     const whatsUrl = Utils.whatsappUrl(
       customer.phone,
       `Olá ${customer.name}, tudo bem? Sou o montador de móveis da RS Montagens!`
     );
 
-    body.innerHTML = `
-      <div class="customer-detail-head">
-        <div class="client-avatar avatar-orange customer-detail-avatar">${esc((customer.name || 'C').charAt(0).toUpperCase())}</div>
-        <h3>${esc(customer.name)}</h3>
-        ${phone ? `<a class="detail-link" href="${Utils.telUrl(phone)}"><i class="fa-solid fa-phone"></i> ${esc(customer.phone)}</a>` : ''}
-        ${fullAddress ? `<a class="detail-link" href="${Utils.mapsUrl(fullAddress)}" target="_blank" rel="noopener"><i class="fa-solid fa-location-dot"></i> ${esc(fullAddress)}</a>` : ''}
-      </div>
-
-      <div class="customer-stats">
+    // Estatísticas: Admin vê faturamento total e lucro líquido.
+    // Montador / Funcionário vê apenas os serviços e o repasse dele!
+    let statsHtml = '';
+    if (ehAdmin) {
+      statsHtml = `
         <div>
           <strong>${Utils.formatBRL(totalRecebido)}</strong>
           <span>Total recebido</span>
@@ -229,14 +246,44 @@ class CustomersController {
           <strong class="text-success">${Utils.formatBRL(totalLucro)}</strong>
           <span>Lucro líquido</span>
         </div>
+      `;
+    } else {
+      statsHtml = `
+        <div>
+          <strong>${services.length}</strong>
+          <span>Serviços</span>
+        </div>
+        <div>
+          <strong>${concluidos}</strong>
+          <span>Concluídos</span>
+        </div>
+        <div>
+          <strong style="color: var(--primary);">${Utils.formatBRL(meusGanhosCliente)}</strong>
+          <span>Você recebeu</span>
+        </div>
+      `;
+    }
+
+    body.innerHTML = `
+      <div class="customer-detail-head">
+        <div class="client-avatar avatar-orange customer-detail-avatar">${esc((customer.name || 'C').charAt(0).toUpperCase())}</div>
+        <h3>${esc(customer.name)}</h3>
+        ${phone ? `<a class="detail-link" href="${Utils.telUrl(phone)}"><i class="fa-solid fa-phone"></i> ${esc(customer.phone)}</a>` : ''}
+        ${fullAddress ? `<a class="detail-link" href="${Utils.mapsUrl(fullAddress)}" target="_blank" rel="noopener"><i class="fa-solid fa-location-dot"></i> ${esc(fullAddress)}</a>` : ''}
+      </div>
+
+      <div class="customer-stats">
+        ${statsHtml}
       </div>
 
       <div class="detail-actions">
         ${phone ? `<a href="${whatsUrl}" target="_blank" rel="noopener" class="btn btn-whatsapp btn-sm"><i class="fa-brands fa-whatsapp"></i> WhatsApp</a>` : ''}
         ${fullAddress ? `<a href="${Utils.mapsUrl(fullAddress)}" target="_blank" rel="noopener" class="btn btn-outline btn-sm"><i class="fa-solid fa-map-location-dot"></i> Google Maps</a>` : ''}
-        <button class="btn btn-primary btn-sm" onclick="window.customersController.scheduleForCustomer('${idArg}')">
-          <i class="fa-solid fa-calendar-plus"></i> Novo serviço
-        </button>
+        ${ehAdmin ? `
+          <button class="btn btn-primary btn-sm" onclick="window.customersController.scheduleForCustomer('${idArg}')">
+            <i class="fa-solid fa-calendar-plus"></i> Novo serviço
+          </button>
+        ` : ''}
       </div>
 
       <span class="detail-section-label">Histórico de serviços</span>
@@ -248,10 +295,33 @@ class CustomersController {
           </div>
         ` : services.map(s => {
           const sCost = Utils.toNumber(s.cost);
+          const pay = Utils.assemblerPay(s);
           const label = s.status === 'concluido' ? 'Concluído'
             : (s.status === 'cancelado' ? 'Cancelado' : 'Agendado');
           const badgeClass = s.status === 'concluido' ? 'badge-concluido'
             : (s.status === 'cancelado' ? 'badge-cancelado' : 'badge-agendado');
+
+          let moneyHtml = '';
+          if (ehAdmin) {
+            moneyHtml = `
+              <strong>${Utils.formatBRL(Utils.serviceTotal(s))}</strong>
+              ${sCost > 0 ? `<span class="history-net">líquido ${Utils.formatBRL(Utils.serviceProfit(s))}</span>` : ''}
+            `;
+          } else {
+            // Funcionário vê apenas o valor do repasse dele
+            if (auth && auth.servicoEhMeu(s)) {
+              moneyHtml = `
+                <strong style="color: var(--primary);">${Utils.formatBRL(pay)}</strong>
+                <span class="history-net">Você recebe</span>
+              `;
+            } else {
+              moneyHtml = `
+                <strong style="color: var(--text-muted);">---</strong>
+                <span class="history-net">Outro montador</span>
+              `;
+            }
+          }
+
           return `
           <button class="history-item" onclick="window.customersController.openServiceFromHistory('${Utils.escapeJsString(s.id)}')">
             <div class="history-main">
@@ -260,21 +330,22 @@ class CustomersController {
               <span class="badge ${badgeClass}">${label}</span>
             </div>
             <div class="history-money">
-              <strong>${Utils.formatBRL(Utils.serviceTotal(s))}</strong>
-              ${sCost > 0 ? `<span class="history-net">líquido ${Utils.formatBRL(Utils.serviceProfit(s))}</span>` : ''}
+              ${moneyHtml}
             </div>
           </button>`;
         }).join('')}
       </div>
 
-      <div class="detail-footer">
-        <button class="btn btn-danger btn-sm" onclick="window.customersController.deleteCustomer('${idArg}')">
-          <i class="fa-solid fa-trash"></i> Excluir
-        </button>
-        <button class="btn btn-outline btn-sm" onclick="window.customersController.openCustomerModal('${idArg}')">
-          <i class="fa-solid fa-pen-to-square"></i> Editar
-        </button>
-      </div>
+      ${ehAdmin ? `
+        <div class="detail-footer">
+          <button class="btn btn-danger btn-sm" onclick="window.customersController.deleteCustomer('${idArg}')">
+            <i class="fa-solid fa-trash"></i> Excluir
+          </button>
+          <button class="btn btn-outline btn-sm" onclick="window.customersController.openCustomerModal('${idArg}')">
+            <i class="fa-solid fa-pen-to-square"></i> Editar
+          </button>
+        </div>
+      ` : ''}
     `;
 
     window.app.openModal('customer-detail-modal');
@@ -288,6 +359,12 @@ class CustomersController {
 
   /** Abre o modal de novo serviço já preenchido com os dados do cliente. */
   scheduleForCustomer(customerId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode agendar serviços.', 'warning');
+      return;
+    }
+
     const customer = window.storageManager.getCustomers().find(c => c.id === customerId);
     if (!customer) return;
 
@@ -319,14 +396,20 @@ class CustomersController {
     const countHeader = document.getElementById('customer-count-badge');
     if (countHeader) countHeader.textContent = `${customers.length} cadastrados`;
 
+    const auth = window.authController;
+    const ehAdmin = !auth || auth.podeVerValoresCheios();
+    const meuId = auth ? auth.getCurrentAssemblerId() : null;
+
     if (customers.length === 0) {
       container.innerHTML = `
         <div class="empty-day-state" style="grid-column: 1 / -1;">
           <i class="fa-solid fa-users-slash"></i>
           <p>Nenhum cliente encontrado.</p>
-          <button class="btn btn-primary btn-sm" onclick="window.customersController.openCustomerModal()">
-            <i class="fa-solid fa-plus"></i> Cadastrar Novo Cliente
-          </button>
+          ${ehAdmin ? `
+            <button class="btn btn-primary btn-sm" onclick="window.customersController.openCustomerModal()">
+              <i class="fa-solid fa-plus"></i> Cadastrar Novo Cliente
+            </button>
+          ` : ''}
         </div>
       `;
       return;
@@ -338,6 +421,9 @@ class CustomersController {
       const totalSpent = clientServices
         .filter(s => s.paymentStatus === 'pago')
         .reduce((sum, s) => sum + Utils.serviceTotal(s), 0);
+      const meusGanhos = clientServices
+        .filter(s => s.assemblerId === meuId && s.status === 'concluido')
+        .reduce((sum, s) => sum + Utils.assemblerPay(s), 0);
 
       const esc = (v) => Utils.escapeHtml(v);
       const idArg = Utils.escapeJsString(c.id);
@@ -368,12 +454,14 @@ class CustomersController {
                     <i class="fa-brands fa-whatsapp"></i>
                   </a>
                 ` : ''}
-                <button class="btn btn-outline btn-icon" style="width: 34px; height: 34px;" onclick="window.customersController.openCustomerModal('${idArg}')" title="Editar">
-                  <i class="fa-solid fa-pen"></i>
-                </button>
-                <button class="btn btn-outline btn-icon" style="width: 34px; height: 34px;" onclick="window.customersController.deleteCustomer('${idArg}')" title="Excluir">
-                  <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
-                </button>
+                ${ehAdmin ? `
+                  <button class="btn btn-outline btn-icon" style="width: 34px; height: 34px;" onclick="window.customersController.openCustomerModal('${idArg}')" title="Editar">
+                    <i class="fa-solid fa-pen"></i>
+                  </button>
+                  <button class="btn btn-outline btn-icon" style="width: 34px; height: 34px;" onclick="window.customersController.deleteCustomer('${idArg}')" title="Excluir">
+                    <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
+                  </button>
+                ` : ''}
               </div>
             </div>
 
@@ -393,13 +481,20 @@ class CustomersController {
 
           <div style="padding-top: 12px; border-top: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Total Recebido</span>
-              <div style="font-size: 1.1rem; font-weight: 800; color: var(--success-dark);">${Utils.formatBRL(totalSpent)}</div>
+              ${ehAdmin ? `
+                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Total Recebido</span>
+                <div style="font-size: 1.1rem; font-weight: 800; color: var(--success-dark);">${Utils.formatBRL(totalSpent)}</div>
+              ` : `
+                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700; text-transform: uppercase;">Você Recebeu</span>
+                <div style="font-size: 1.1rem; font-weight: 800; color: var(--primary);">${Utils.formatBRL(meusGanhos)}</div>
+              `}
               <span style="font-size: 0.75rem; color: var(--text-muted);">${servicesCount} serviço${servicesCount === 1 ? '' : 's'} registrado${servicesCount === 1 ? '' : 's'}</span>
             </div>
-            <button class="btn btn-primary btn-sm" onclick="window.customersController.scheduleForCustomer('${idArg}')">
-              <i class="fa-solid fa-calendar-plus"></i> Agendar
-            </button>
+            ${ehAdmin ? `
+              <button class="btn btn-primary btn-sm" onclick="window.customersController.scheduleForCustomer('${idArg}')">
+                <i class="fa-solid fa-calendar-plus"></i> Agendar
+              </button>
+            ` : ''}
           </div>
         </div>
       `;

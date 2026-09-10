@@ -277,6 +277,13 @@ class AuthController {
     // Apply UI role permissions
     this.applyRolePermissions(isAdmin);
 
+    if (!isAdmin && window.app) {
+      const adminOnlyViews = ['view-financeiro', 'view-ajustes', 'view-orcamentos', 'view-montadores', 'view-lojas'];
+      if (adminOnlyViews.includes(window.app.currentView)) {
+        window.app.navigateTo('view-agenda');
+      }
+    }
+
     // Sync cloud data with Firestore and start real-time listener
     if (window.storageManager) {
       if (window.storageManager.syncFromFirestore) {
@@ -305,13 +312,18 @@ class AuthController {
       el.style.display = isAdmin ? '' : 'none';
     });
 
-    // In finance tab, if funcionario, restrict sensitive overall business actions
-    const financeNav = document.querySelectorAll('[data-view-target="view-financeiro"]');
-    financeNav.forEach(nav => {
-      if (!isAdmin) {
-        // Can still view services or have an indicator
-        nav.setAttribute('title', 'Acesso operacional');
-      }
+    // Hide admin navigation targets for employees
+    const adminNavTargets = ['view-financeiro', 'view-ajustes', 'view-orcamentos', 'view-montadores', 'view-lojas'];
+    adminNavTargets.forEach(target => {
+      const navEls = document.querySelectorAll(`[data-view-target="${target}"]`);
+      navEls.forEach(el => {
+        const parentLi = el.closest('li');
+        if (parentLi && parentLi.closest('.mobile-bottom-nav')) {
+          parentLi.style.display = isAdmin ? '' : 'none';
+        } else {
+          el.style.display = isAdmin ? '' : 'none';
+        }
+      });
     });
   }
 

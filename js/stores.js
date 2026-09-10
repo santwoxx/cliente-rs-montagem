@@ -81,6 +81,12 @@ class StoresController {
   }
 
   openStoreModal(storeId = null) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode gerenciar lojas parceiras.', 'warning');
+      return;
+    }
+
     this.currentEditingId = storeId;
     const form = document.getElementById('store-form');
     if (form) form.reset();
@@ -142,6 +148,12 @@ class StoresController {
   }
 
   deleteStore(storeId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode excluir lojas parceiras.', 'warning');
+      return;
+    }
+
     const services = window.storageManager.getServices().filter(s => s.storeId === storeId);
     const aviso = services.length
       ? `Esta loja tem ${services.length} serviço(s) vinculado(s). Eles continuarão na agenda, mas ficarão sem loja. Excluir mesmo assim?`
@@ -370,6 +382,12 @@ class StoresController {
    * pronto para imprimir ou salvar em PDF.
    */
   openConsolidatedInvoice(storeId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode emitir notas para lojas.', 'warning');
+      return;
+    }
+
     const store = window.storageManager.getStores().find(s => s.id === storeId);
     if (!store) return;
 
@@ -458,6 +476,12 @@ class StoresController {
 
   /** Nota consolidada em texto, aberta direto na conversa da loja. */
   sendInvoiceToStore(storeId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode enviar notas para lojas.', 'warning');
+      return;
+    }
+
     const store = window.storageManager.getStores().find(s => s.id === storeId);
     if (!store) return;
 

@@ -84,6 +84,12 @@ class FinanceController {
   }
 
   openTransactionModal(type = 'receita') {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode lançar receitas ou despesas.', 'warning');
+      return;
+    }
+
     const form = document.getElementById('transaction-form');
     if (form) form.reset();
 
@@ -156,6 +162,12 @@ class FinanceController {
   }
 
   deleteTransaction(txId) {
+    const auth = window.authController;
+    if (auth && !auth.podeVerValoresCheios()) {
+      window.app.showToast('Apenas o administrador pode excluir lançamentos financeiros.', 'warning');
+      return;
+    }
+
     if (!confirm('Deseja realmente excluir este lançamento financeiro?')) return;
     let transactions = window.storageManager.getTransactions();
     transactions = transactions.filter(t => t.id !== txId);
