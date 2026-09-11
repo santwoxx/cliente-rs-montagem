@@ -594,11 +594,41 @@ class AuthController {
             <div style="font-size: 0.78rem; color: var(--text-muted);">${m.email}</div>
           </div>
         </div>
-        <div>
+        <div style="display: flex; align-items: center; gap: 8px;">
           <span class="badge badge-funcionario">Funcionário</span>
+          <button class="btn btn-outline btn-sm" onclick="window.authController.deleteEmployee('${m.uid}')" style="padding: 4px 8px; border-color: var(--danger-color);">
+            <i class="fa-solid fa-trash" style="color: var(--danger-color);"></i>
+          </button>
         </div>
       </div>
     `).join('');
+  }
+
+  async deleteEmployee(uid) {
+    if (!this.isAdmin) {
+      window.app.showToast('Apenas administradores podem remover funcionários.', 'danger');
+      return;
+    }
+    
+    if (!confirm('Deseja realmente excluir este funcionário? O login dele será revogado (não poderá mais acessar o sistema).')) {
+      return;
+    }
+
+    try {
+      if (window.firestoreDb) {
+        await window.firestoreDb.collection('users').doc(uid).delete();
+      }
+
+      let localTeam = JSON.parse(localStorage.getItem('movelpro_team') || '[]');
+      localTeam = localTeam.filter(m => m.uid !== uid);
+      localStorage.setItem('movelpro_team', JSON.stringify(localTeam));
+
+      window.app.showToast('Funcionário removido com sucesso!', 'success');
+      this.loadTeamMembers();
+    } catch (e) {
+      console.error('Erro ao remover funcionário:', e);
+      window.app.showToast('Erro ao remover funcionário.', 'danger');
+    }
   }
 }
 
