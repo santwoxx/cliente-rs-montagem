@@ -16,7 +16,8 @@ const firebaseConfig = {
 // Admin emails defined by the user
 const ADMIN_EMAILS = [
   'brisasofc@gmail.com',
-  'rsmoveismontador@gmail.com'
+  'rsmoveismontador@gmail.com',
+  'ataliba-souza@hotmail.com.br'
 ];
 
 // Initialize Firebase App

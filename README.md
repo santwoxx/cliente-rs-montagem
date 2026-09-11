@@ -7,7 +7,7 @@ Sistema web responsivo para gestão operacional e financeira de montadores de m�
 ## 🚀 Funcionalidades
 
 - **Autenticação com Firebase**:
-  - Administradores: `brisasofc@gmail.com` e `rsmoveismontador@gmail.com`.
+  - Administradores: `brisasofc@gmail.com`, `rsmoveismontador@gmail.com` e `ataliba-souza@hotmail.com.br`.
   - Funcionários: Login e senha cadastrados pelo administrador na aba de Ajustes.
 - **Agenda Inteligente**:
   - Calendário mensal interativo com status por cores (Verde: Concluído, Vermelho: Agendado, Bicolor: Ambos).
