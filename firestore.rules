@@ -4,16 +4,16 @@ service cloud.firestore {
 
     // =========================================================================
     // REGRAS DE ACESSO DO SISTEMA RS MONTAGENS
-    // Administradores: brisasofc@gmail.com, rsmoveismontador@gmail.com e ataliba-souza@hotmail.com.br
-    // Funcionários: Usuários cadastrados pelo administrador que acessam com login e senha
+    // Administradores: brisasofc@gmail.com e rsmoveismontador@gmail.com
+    // Funcionários: Usuários cadastrados pelo administrador que acessam com login e senha.
+    // Montadores da equipe são funcionários — nunca entram na lista de admin.
     // =========================================================================
 
     // Função: Verifica se o usuário autenticado é um Administrador oficial
     function isAdmin() {
       return request.auth != null && (
         request.auth.token.email.lower() == 'brisasofc@gmail.com' ||
-        request.auth.token.email.lower() == 'rsmoveismontador@gmail.com' ||
-        request.auth.token.email.lower() == 'ataliba-souza@hotmail.com.br'
+        request.auth.token.email.lower() == 'rsmoveismontador@gmail.com'
       );
     }
 

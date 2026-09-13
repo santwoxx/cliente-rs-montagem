@@ -13,11 +13,13 @@ const firebaseConfig = {
   measurementId: "G-3WDMJ7V56G"
 };
 
-// Admin emails defined by the user
+// Admin emails defined by the user.
+// Somente o desenvolvedor e o dono da empresa. Montadores da equipe NÃO entram
+// aqui: eles são cadastrados em Ajustes > Equipe e entram como funcionários,
+// vendo apenas as próprias montagens e o valor que recebem.
 const ADMIN_EMAILS = [
   'brisasofc@gmail.com',
-  'rsmoveismontador@gmail.com',
-  'ataliba-souza@hotmail.com.br'
+  'rsmoveismontador@gmail.com'
 ];
 
 // Initialize Firebase App

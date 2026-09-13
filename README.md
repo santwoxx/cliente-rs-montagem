@@ -7,8 +7,10 @@ Sistema web responsivo para gestão operacional e financeira de montadores de m�
 ## 🚀 Funcionalidades
 
 - **Autenticação com Firebase**:
-  - Administradores: `brisasofc@gmail.com`, `rsmoveismontador@gmail.com` e `ataliba-souza@hotmail.com.br`.
+  - Administradores: `brisasofc@gmail.com` e `rsmoveismontador@gmail.com`. **Só o dono e o desenvolvedor** — montador nenhum entra nessa lista, senão ele veria o financeiro e a carteira inteira de clientes.
   - Funcionários: Login e senha cadastrados pelo administrador na aba de Ajustes.
+  - **Quem entra é quem está na equipe.** Ter conta no Firebase não basta: sem cadastro ativo em Ajustes > Equipe, o sistema recusa a entrada e desloga na hora. É assim que "remover acesso" funciona de verdade — o Firebase client-side não apaga a conta de outra pessoa (isso exigiria o Admin SDK num servidor).
+  - Se o e-mail já tiver conta (tentativa anterior, cadastro antigo), o cadastro **não trava**: ele é vinculado à equipe e o admin pode disparar o link de nova senha pelo botão da chave na lista.
 - **Agenda Inteligente**:
   - Calendário mensal interativo com status por cores (Verde: Concluído, Vermelho: Agendado, Bicolor: Ambos).
   - Ações rápidas de WhatsApp, rota no Google Maps/Waze e conclusão do serviço em 1 clique.

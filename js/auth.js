@@ -121,24 +121,23 @@ class AuthController {
     window.firebaseAuth.onAuthStateChanged(async (user) => {
       if (user) {
         this.currentUser = user;
-        const normalizedEmail = (user.email || '').toLowerCase().trim();
 
-        // Check if admin by email or by firestore role
-        let isAdmin = window.ADMIN_EMAILS.map(e => e.toLowerCase()).includes(normalizedEmail);
+        const acesso = await this.resolverAcesso(user);
 
-        if (!isAdmin && window.firestoreDb) {
-          try {
-            const userDoc = await window.firestoreDb.collection('users').doc(user.uid).get();
-            if (userDoc.exists && userDoc.data().role === 'admin') {
-              isAdmin = true;
-            }
-          } catch (e) {
-            console.error('Erro ao verificar papel do usuário no Firestore:', e);
-          }
+        // Conta que existe no Firebase mas não está na equipe não entra.
+        // É isto que faz "remover funcionário" valer de verdade: o login
+        // continua existindo no Firebase, mas o sistema recusa a entrada.
+        if (!acesso.autorizado) {
+          this.currentUser = null;
+          this.isAdmin = false;
+          await window.firebaseAuth.signOut();
+          this.showLoginScreen();
+          this.showLoginError(acesso.motivo);
+          return;
         }
 
-        this.isAdmin = isAdmin;
-        this.onUserAuthenticated(user, isAdmin);
+        this.isAdmin = acesso.isAdmin;
+        this.onUserAuthenticated(user, acesso.isAdmin);
       } else {
         this.currentUser = null;
         this.isAdmin = false;
@@ -255,6 +254,76 @@ class AuthController {
     }
   }
 
+  /**
+   * Decide se esta conta pode entrar e com qual papel.
+   *
+   * Regra:
+   *  - E-mail na lista fixa de administradores  -> admin (dono/desenvolvedor).
+   *  - Cadastro na equipe, ativo                -> funcionário (montador).
+   *  - Qualquer outra conta                     -> recusada.
+   *
+   * O Firebase client-side não apaga a conta de outra pessoa (isso exige o
+   * Admin SDK no servidor). Então a revogação de acesso acontece aqui: a conta
+   * continua existindo no Firebase, mas sem cadastro na equipe ela não entra.
+   */
+  async resolverAcesso(user) {
+    const email = (user.email || '').toLowerCase().trim();
+
+    if (window.ADMIN_EMAILS.map(e => e.toLowerCase()).includes(email)) {
+      return { autorizado: true, isAdmin: true };
+    }
+
+    if (!window.firestoreDb) {
+      // Sem Firestore não há como conferir a equipe. Entra como funcionário,
+      // que é o papel de menor privilégio — nunca como administrador.
+      return { autorizado: true, isAdmin: false };
+    }
+
+    try {
+      const registro = await this.buscarRegistroDaEquipe(user.uid, email);
+
+      if (!registro) {
+        return {
+          autorizado: false,
+          motivo: 'Esta conta não está cadastrada na equipe. Peça ao administrador para cadastrar o seu e-mail em Ajustes > Equipe.'
+        };
+      }
+
+      if (registro.active === false) {
+        return {
+          autorizado: false,
+          motivo: 'Seu acesso foi desativado pelo administrador.'
+        };
+      }
+
+      return { autorizado: true, isAdmin: registro.role === 'admin' };
+    } catch (e) {
+      // Falha de rede não pode trancar o montador do lado de fora no meio da
+      // rua. Entra como funcionário; a escalada para admin nunca vem daqui.
+      console.warn('Não foi possível verificar o acesso no Firestore:', e);
+      return { autorizado: true, isAdmin: false };
+    }
+  }
+
+  /** Procura o cadastro da equipe pelo uid e, se não achar, pelo e-mail. */
+  async buscarRegistroDaEquipe(uid, email) {
+    const porUid = await window.firestoreDb.collection('users').doc(uid).get();
+    if (porUid.exists) return { ...porUid.data(), _docId: porUid.id };
+
+    const porEmail = await window.firestoreDb
+      .collection('users')
+      .where('email', '==', email)
+      .limit(1)
+      .get();
+
+    if (!porEmail.empty) {
+      const doc = porEmail.docs[0];
+      return { ...doc.data(), _docId: doc.id };
+    }
+
+    return null;
+  }
+
   onUserAuthenticated(user, isAdmin) {
     this.hideLoginScreen();
 
@@ -357,57 +426,88 @@ class AuthController {
       throw new Error('A senha deve ter no mínimo 6 caracteres.');
     }
 
+    if (window.ADMIN_EMAILS.map(e => e.toLowerCase()).includes(emailTratado)) {
+      throw new Error(
+        'Este e-mail é de administrador do sistema e não pode ser cadastrado como funcionário.'
+      );
+    }
+
     let tempApp = null;
+    let uid = null;
+    let contaJaExistia = false;
 
     try {
       // Cria instância secundária do Firebase App para NÃO deslogar o Admin
       const tempAppName = 'SecondaryAuthApp_' + Date.now();
       tempApp = firebase.initializeApp(window.firebaseConfig, tempAppName);
-      const userCredential = await tempApp.auth().createUserWithEmailAndPassword(emailTratado, password);
 
-      const uid = userCredential.user.uid;
-
-      if (userCredential.user) {
+      try {
+        const userCredential = await tempApp.auth().createUserWithEmailAndPassword(emailTratado, password);
+        uid = userCredential.user.uid;
         await userCredential.user.updateProfile({ displayName: nomeTratado });
+        await tempApp.auth().signOut();
+      } catch (authErr) {
+        // A conta já existe no Firebase (tentativa anterior que falhou no meio,
+        // ou e-mail que já foi usado antes). Isso não pode ser um beco sem
+        // saída: o cadastro na equipe segue, e é ele que libera a entrada.
+        // A senha atual continua valendo — se ninguém souber qual é, o admin
+        // manda o link de redefinição pelo botão da lista da equipe.
+        if (authErr && authErr.code === 'auth/email-already-in-use') {
+          contaJaExistia = true;
+        } else {
+          throw authErr;
+        }
       }
 
-      await tempApp.auth().signOut();
       await tempApp.delete();
       tempApp = null;
 
-      // Salva no Firestore
+      // Sem o uid (conta preexistente), o documento usa um id derivado do
+      // e-mail. A verificação de acesso procura por uid e também por e-mail,
+      // então os dois formatos funcionam.
+      const docId = uid || this.idDocPorEmail(emailTratado);
+
       const employeeData = {
-        uid,
+        uid: uid || '',
         name: nomeTratado,
         email: emailTratado,
         phone: phone || '',
         role: 'funcionario',
+        active: true,
         createdAt: new Date().toISOString(),
         createdBy: this.currentUser ? this.currentUser.email : 'admin'
       };
 
-      if (window.firestoreDb) {
-        await window.firestoreDb.collection('users').doc(uid).set(employeeData);
-      }
-
-      // Salva no cache da equipe
+      // Cache local primeiro: mesmo que a gravação na nuvem falhe, o admin vê
+      // o funcionário na lista em vez de achar que nada foi salvo.
       const localTeam = JSON.parse(localStorage.getItem('movelpro_team') || '[]');
-      const semDuplicados = localTeam.filter(m => m.email !== emailTratado && m.uid !== uid);
-      semDuplicados.push(employeeData);
+      const semDuplicados = localTeam.filter(
+        m => m.email !== emailTratado && (!uid || m.uid !== uid)
+      );
+      semDuplicados.push({ ...employeeData, docId });
       localStorage.setItem('movelpro_team', JSON.stringify(semDuplicados));
 
       // Vincula no cadastro de montadores
       this.vincularMontador(nomeTratado, emailTratado, phone);
 
+      if (window.firestoreDb) {
+        await window.firestoreDb.collection('users').doc(docId).set(employeeData, { merge: true });
+      }
+
       if (this.loadTeamMembers) this.loadTeamMembers();
 
-      return { success: true, uid };
+      return { success: true, uid, docId, contaJaExistia };
     } catch (e) {
       if (tempApp) {
         try { await tempApp.delete(); } catch (_) {}
       }
       throw e;
     }
+  }
+
+  /** Id de documento estável a partir do e-mail, quando o uid é desconhecido. */
+  idDocPorEmail(email) {
+    return 'email_' + String(email).toLowerCase().replace(/[^a-z0-9]+/g, '_');
   }
 
   async handleCreateEmployee() {
@@ -443,8 +543,17 @@ class AuthController {
     }
 
     try {
-      await this.criarContaFuncionario(name, email, password);
-      window.app.showToast(`Funcionário ${name} cadastrado com sucesso! Ele já pode fazer login.`, 'success');
+      const res = await this.criarContaFuncionario(name, email, password);
+
+      if (res.contaJaExistia) {
+        window.app.showToast(
+          `${name} já tinha conta neste e-mail e agora entra como funcionário. A senha continua sendo a antiga — se ele não souber, use "Enviar link de senha" na lista da equipe.`,
+          'warning'
+        );
+      } else {
+        window.app.showToast(`Funcionário ${name} cadastrado com sucesso! Ele já pode fazer login.`, 'success');
+      }
+
       document.getElementById('employee-form').reset();
     } catch (e) {
       console.error('Erro ao cadastrar funcionário:', e);
@@ -562,7 +671,9 @@ class AuthController {
       try {
         const snapshot = await window.firestoreDb.collection('users').get();
         snapshot.forEach(doc => {
-          members.push(doc.data());
+          // O id do documento é o que identifica o cadastro na hora de remover:
+          // pode ser o uid do Firebase ou um id derivado do e-mail.
+          members.push({ ...doc.data(), docId: doc.id });
         });
       } catch (e) {
         console.warn('Erro ao carregar equipe do Firestore:', e);
@@ -583,51 +694,105 @@ class AuthController {
       return;
     }
 
-    listContainer.innerHTML = members.map(m => `
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 12px 14px; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 8px;">
-        <div style="display: flex; align-items: center; gap: 12px;">
-          <div class="client-avatar avatar-blue" style="width: 38px; height: 38px; font-size: 0.9rem;">
-            ${(m.name || m.email).charAt(0).toUpperCase()}
+    const esc = (v) => (window.Utils ? Utils.escapeHtml(v) : String(v == null ? '' : v));
+    const escJs = (v) => (window.Utils ? Utils.escapeJsString(v) : String(v == null ? '' : v));
+
+    listContainer.innerHTML = members.map(m => {
+      const docId = m.docId || m._docId || m.uid || this.idDocPorEmail(m.email || '');
+      const inativo = m.active === false;
+
+      return `
+      <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 12px 14px; background: var(--bg-app); border: 1px solid var(--border-color); border-radius: var(--radius-md); margin-bottom: 8px; ${inativo ? 'opacity: 0.6;' : ''}">
+        <div style="display: flex; align-items: center; gap: 12px; min-width: 0;">
+          <div class="client-avatar avatar-blue" style="width: 38px; height: 38px; font-size: 0.9rem; flex-shrink: 0;">
+            ${esc((m.name || m.email || 'F').charAt(0).toUpperCase())}
           </div>
-          <div>
-            <div style="font-weight: 800; font-size: 0.92rem;">${m.name || 'Funcionário'}</div>
-            <div style="font-size: 0.78rem; color: var(--text-muted);">${m.email}</div>
+          <div style="min-width: 0;">
+            <div style="font-weight: 800; font-size: 0.92rem;">${esc(m.name || 'Funcionário')}</div>
+            <div style="font-size: 0.78rem; color: var(--text-muted); overflow: hidden; text-overflow: ellipsis;">${esc(m.email)}</div>
           </div>
         </div>
-        <div style="display: flex; align-items: center; gap: 8px;">
-          <span class="badge badge-funcionario">Funcionário</span>
-          <button class="btn btn-outline btn-sm" onclick="window.authController.deleteEmployee('${m.uid}')" style="padding: 4px 8px; border-color: var(--danger-color);">
-            <i class="fa-solid fa-trash" style="color: var(--danger-color);"></i>
+        <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
+          <span class="badge ${inativo ? 'badge-cancelado' : 'badge-funcionario'}">${inativo ? 'Sem acesso' : 'Funcionário'}</span>
+          <button class="btn btn-outline btn-icon" title="Enviar link de senha"
+                  onclick="window.authController.enviarLinkDeSenha('${escJs(m.email)}')"
+                  style="width: 32px; height: 32px;">
+            <i class="fa-solid fa-key"></i>
+          </button>
+          <button class="btn btn-outline btn-icon" title="Remover acesso"
+                  onclick="window.authController.deleteEmployee('${escJs(docId)}', '${escJs(m.email)}')"
+                  style="width: 32px; height: 32px;">
+            <i class="fa-solid fa-trash" style="color: var(--danger);"></i>
           </button>
         </div>
       </div>
-    `).join('');
+      `;
+    }).join('');
   }
 
-  async deleteEmployee(uid) {
+  /**
+   * Manda o e-mail de redefinição de senha do Firebase.
+   * É o caminho para contas que já existiam e cuja senha ninguém sabe.
+   */
+  async enviarLinkDeSenha(email) {
+    if (!this.isAdmin) {
+      window.app.showToast('Apenas administradores podem redefinir senhas da equipe.', 'danger');
+      return;
+    }
+
+    try {
+      await window.firebaseAuth.sendPasswordResetEmail(email);
+      window.app.showToast(`Link de nova senha enviado para ${email}.`, 'success');
+    } catch (e) {
+      console.error('Erro ao enviar link de senha:', e);
+      window.app.showToast('Não consegui enviar o link: ' + e.message, 'danger');
+    }
+  }
+
+  /**
+   * Tira o acesso do funcionário.
+   *
+   * A conta continua existindo no Firebase (apagá-la exige o Admin SDK, que
+   * roda em servidor). O que revoga o acesso de fato é sair da equipe: sem
+   * cadastro ativo, `resolverAcesso` recusa a entrada e desloga na hora.
+   */
+  async deleteEmployee(docId, email = '') {
     if (!this.isAdmin) {
       window.app.showToast('Apenas administradores podem remover funcionários.', 'danger');
       return;
     }
-    
-    if (!confirm('Deseja realmente excluir este funcionário? O login dele será revogado (não poderá mais acessar o sistema).')) {
+
+    if (!confirm('Remover o acesso deste funcionário? Ele não vai mais conseguir entrar no sistema.')) {
       return;
     }
 
     try {
       if (window.firestoreDb) {
-        await window.firestoreDb.collection('users').doc(uid).delete();
+        await window.firestoreDb.collection('users').doc(docId).delete();
+
+        // Cadastro antigo pode estar gravado com outro id (uid x e-mail).
+        if (email) {
+          const duplicados = await window.firestoreDb
+            .collection('users')
+            .where('email', '==', String(email).toLowerCase())
+            .get();
+          await Promise.all(duplicados.docs.map(d => d.ref.delete()));
+        }
       }
 
       let localTeam = JSON.parse(localStorage.getItem('movelpro_team') || '[]');
-      localTeam = localTeam.filter(m => m.uid !== uid);
+      localTeam = localTeam.filter(m => {
+        const id = m.docId || m.uid;
+        const mesmoEmail = email && String(m.email || '').toLowerCase() === String(email).toLowerCase();
+        return id !== docId && !mesmoEmail;
+      });
       localStorage.setItem('movelpro_team', JSON.stringify(localTeam));
 
-      window.app.showToast('Funcionário removido com sucesso!', 'success');
+      window.app.showToast('Acesso removido. Ele não entra mais no sistema.', 'success');
       this.loadTeamMembers();
     } catch (e) {
       console.error('Erro ao remover funcionário:', e);
-      window.app.showToast('Erro ao remover funcionário.', 'danger');
+      window.app.showToast('Erro ao remover funcionário: ' + e.message, 'danger');
     }
   }
 }
