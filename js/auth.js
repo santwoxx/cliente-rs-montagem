@@ -173,12 +173,18 @@ class AuthController {
 
     if (!emailInput || !passInput) return;
 
-    const email = emailInput.value.trim();
+    let loginId = emailInput.value.trim();
     const password = passInput.value;
 
-    if (!email || !password) {
-      this.showLoginError('Preencha seu e-mail e sua senha de acesso.');
+    if (!loginId || !password) {
+      this.showLoginError('Preencha seu nome e sua senha de acesso.');
       return;
+    }
+
+    let email = loginId;
+    if (!loginId.includes('@')) {
+      const baseName = loginId.toLowerCase().replace(/[^a-z0-9]/g, '');
+      email = `${baseName}_${password}@rsmontagem.app`;
     }
 
     if (errorAlert) errorAlert.style.display = 'none';
@@ -410,27 +416,23 @@ class AuthController {
   }
 
   // Admin Function: Create new employee account without logging out admin
-  async criarContaFuncionario(name, email, password, phone = '') {
+  async criarContaFuncionario(name, password, phone = '') {
     if (!this.isAdmin) {
       throw new Error('Apenas administradores podem cadastrar funcionários.');
     }
 
     const nomeTratado = String(name || '').trim();
-    const emailTratado = String(email || '').trim().toLowerCase();
 
-    if (!nomeTratado || !emailTratado || !password) {
-      throw new Error('Preencha nome, e-mail e senha do funcionário.');
+    if (!nomeTratado || !password) {
+      throw new Error('Preencha nome e senha do funcionário.');
     }
 
     if (password.length < 6) {
       throw new Error('A senha deve ter no mínimo 6 caracteres.');
     }
-
-    if (window.ADMIN_EMAILS.map(e => e.toLowerCase()).includes(emailTratado)) {
-      throw new Error(
-        'Este e-mail é de administrador do sistema e não pode ser cadastrado como funcionário.'
-      );
-    }
+    
+    const baseName = nomeTratado.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const emailTratado = `${baseName}_${password}@rsmontagem.app`;
 
     let tempApp = null;
     let uid = null;
@@ -462,27 +464,28 @@ class AuthController {
       await tempApp.delete();
       tempApp = null;
 
-      // Sem o uid (conta preexistente), o documento usa um id derivado do
-      // e-mail. A verificação de acesso procura por uid e também por e-mail,
-      // então os dois formatos funcionam.
-      const docId = uid || this.idDocPorEmail(emailTratado);
+      // Buscar funcionário existente pelo nome
+      let docId = uid || this.idDocPorEmail(emailTratado);
+      
+      const localTeam = JSON.parse(localStorage.getItem('movelpro_team') || '[]');
+      const existenteLocal = localTeam.find(m => String(m.name || '').toLowerCase() === nomeTratado.toLowerCase());
+      if (existenteLocal && existenteLocal.docId) {
+         docId = existenteLocal.docId;
+      }
 
       const employeeData = {
-        uid: uid || '',
+        uid: uid || (existenteLocal ? existenteLocal.uid : ''),
         name: nomeTratado,
         email: emailTratado,
-        phone: phone || '',
+        phone: phone || (existenteLocal ? existenteLocal.phone : ''),
         role: 'funcionario',
         active: true,
-        createdAt: new Date().toISOString(),
+        createdAt: (existenteLocal && existenteLocal.createdAt) ? existenteLocal.createdAt : new Date().toISOString(),
         createdBy: this.currentUser ? this.currentUser.email : 'admin'
       };
 
-      // Cache local primeiro: mesmo que a gravação na nuvem falhe, o admin vê
-      // o funcionário na lista em vez de achar que nada foi salvo.
-      const localTeam = JSON.parse(localStorage.getItem('movelpro_team') || '[]');
       const semDuplicados = localTeam.filter(
-        m => m.email !== emailTratado && (!uid || m.uid !== uid)
+        m => String(m.name || '').toLowerCase() !== nomeTratado.toLowerCase()
       );
       semDuplicados.push({ ...employeeData, docId });
       localStorage.setItem('movelpro_team', JSON.stringify(semDuplicados));
@@ -517,17 +520,15 @@ class AuthController {
     }
 
     const nameInput = document.getElementById('emp-name');
-    const emailInput = document.getElementById('emp-email');
     const passInput = document.getElementById('emp-password');
     const submitBtn = document.getElementById('btn-create-emp');
 
-    if (!nameInput || !emailInput || !passInput) return;
+    if (!nameInput || !passInput) return;
 
     const name = nameInput.value.trim();
-    const email = emailInput.value.trim();
     const password = passInput.value;
 
-    if (!name || !email || !password) {
+    if (!name || !password) {
       window.app.showToast('Preencha todos os campos do funcionário.', 'danger');
       return;
     }
@@ -543,16 +544,9 @@ class AuthController {
     }
 
     try {
-      const res = await this.criarContaFuncionario(name, email, password);
+      const res = await this.criarContaFuncionario(name, password);
 
-      if (res.contaJaExistia) {
-        window.app.showToast(
-          `${name} já tinha conta neste e-mail e agora entra como funcionário. A senha continua sendo a antiga — se ele não souber, use "Enviar link de senha" na lista da equipe.`,
-          'warning'
-        );
-      } else {
-        window.app.showToast(`Funcionário ${name} cadastrado com sucesso! Ele já pode fazer login.`, 'success');
-      }
+      window.app.showToast(`Funcionário ${name} salvo com sucesso! A nova senha já está ativa.`, 'success');
 
       document.getElementById('employee-form').reset();
     } catch (e) {
@@ -605,23 +599,24 @@ class AuthController {
 
     const assemblers = window.storageManager.getAssemblers();
     const alvo = String(email || '').toLowerCase();
-    const existente = assemblers.find(a => String(a.email || '').toLowerCase() === alvo);
+    
+    let existente = assemblers.find(a => String(a.name || '').trim().toLowerCase() === String(nome || '').trim().toLowerCase());
+    
+    if (existente) {
+      existente.email = email;
+      if (phone) existente.phone = phone;
+      window.storageManager.saveAssemblers(assemblers);
+      if (window.assemblersController) window.assemblersController.render();
+      return;
+    }
+
+    existente = assemblers.find(a => String(a.email || '').toLowerCase() === alvo);
 
     if (existente) {
       if (!existente.name && nome) existente.name = nome;
       if (!existente.phone && phone) existente.phone = phone;
       window.storageManager.saveAssemblers(assemblers);
-      return;
-    }
-
-    // Mesmo nome já cadastrado sem e-mail? Aproveita o cadastro e só amarra o login.
-    const porNome = assemblers.find(
-      a => !a.email && String(a.name || '').trim().toLowerCase() === String(nome || '').trim().toLowerCase()
-    );
-    if (porNome) {
-      porNome.email = email;
-      if (!porNome.phone && phone) porNome.phone = phone;
-      window.storageManager.saveAssemblers(assemblers);
+      if (window.assemblersController) window.assemblersController.render();
       return;
     }
 
@@ -714,11 +709,6 @@ class AuthController {
         </div>
         <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0;">
           <span class="badge ${inativo ? 'badge-cancelado' : 'badge-funcionario'}">${inativo ? 'Sem acesso' : 'Funcionário'}</span>
-          <button class="btn btn-outline btn-icon" title="Enviar link de senha"
-                  onclick="window.authController.enviarLinkDeSenha('${escJs(m.email)}')"
-                  style="width: 32px; height: 32px;">
-            <i class="fa-solid fa-key"></i>
-          </button>
           <button class="btn btn-outline btn-icon" title="Remover acesso"
                   onclick="window.authController.deleteEmployee('${escJs(docId)}', '${escJs(m.email)}')"
                   style="width: 32px; height: 32px;">

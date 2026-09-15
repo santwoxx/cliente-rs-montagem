@@ -113,7 +113,6 @@ class AssemblersController {
         document.getElementById('assembler-phone').value = a.phone || '';
         const pixEl = document.getElementById('assembler-pix-key');
         if (pixEl) pixEl.value = a.pixKey || '';
-        document.getElementById('assembler-email').value = a.email || '';
         document.getElementById('assembler-is-owner').checked = !!a.isOwner;
       }
       if (pwdInput) pwdInput.value = '';
@@ -137,7 +136,6 @@ class AssemblersController {
     const phone = document.getElementById('assembler-phone').value.trim();
     const pixKeyEl = document.getElementById('assembler-pix-key');
     const pixKey = pixKeyEl ? pixKeyEl.value.trim() : '';
-    const email = document.getElementById('assembler-email').value.trim().toLowerCase();
     const password = (document.getElementById('assembler-password')?.value || '').trim();
     const isOwner = document.getElementById('assembler-is-owner').checked;
 
@@ -146,7 +144,7 @@ class AssemblersController {
       return;
     }
 
-    if (!isOwner && email && password && password.length < 6) {
+    if (!isOwner && password && password.length < 6) {
       window.app.showToast('A senha de acesso do montador deve ter no mínimo 6 caracteres.', 'danger');
       return;
     }
@@ -161,10 +159,10 @@ class AssemblersController {
       let contaCriada = false;
       let loginFalhou = false;
 
-      // Se informou e-mail e senha, provisiona a conta de login no Firebase Authentication
-      if (!isOwner && email && password && window.authController) {
+      // Se informou senha, provisiona a conta de login no Firebase Authentication
+      if (!isOwner && password && window.authController) {
         try {
-          await window.authController.criarContaFuncionario(name, email, password, phone);
+          await window.authController.criarContaFuncionario(name, password, phone);
           contaCriada = true;
         } catch (authErr) {
           if (authErr && authErr.code === 'auth/email-already-in-use') {
@@ -192,7 +190,14 @@ class AssemblersController {
         const idx = assemblers.findIndex(a => a.id === this.currentEditingId);
         if (idx !== -1) {
           const previousName = assemblers[idx].name;
-          assemblers[idx] = { ...assemblers[idx], name, phone, email, isOwner, pixKey };
+          
+          let updatedEmail = assemblers[idx].email;
+          if (password) {
+             const baseName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+             updatedEmail = `${baseName}_${password}@rsmontagem.app`;
+          }
+          
+          assemblers[idx] = { ...assemblers[idx], name, phone, email: updatedEmail, isOwner, pixKey };
           window.storageManager.saveAssemblers(assemblers);
 
           // Mantém o nome gravado nos serviços em sincronia com o cadastro.
@@ -221,11 +226,13 @@ class AssemblersController {
         }
       } else {
         // Se a conta acabou de ser criada por criarContaFuncionario, o vincularMontador já pode ter adicionado
-        const existente = assemblers.find(a => email && String(a.email || '').toLowerCase() === email);
+        const baseName = name.toLowerCase().replace(/[^a-z0-9]/g, '');
+        const expectedEmail = password ? `${baseName}_${password}@rsmontagem.app` : null;
+        const existente = assemblers.find(a => (expectedEmail && String(a.email || '').toLowerCase() === expectedEmail) || String(a.name || '').trim().toLowerCase() === name.toLowerCase());
         if (!existente) {
           assemblers.push({
             id: 'a_' + Date.now(),
-            name, phone, email, isOwner, pixKey,
+            name, phone, email: expectedEmail || '', isOwner, pixKey,
             createdAt: new Date().toISOString()
           });
           window.storageManager.saveAssemblers(assemblers);

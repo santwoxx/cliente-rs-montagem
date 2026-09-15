@@ -994,10 +994,7 @@
                     <label class="form-label">Nome Completo do Funcionário *</label>
                     <input type="text" id="emp-name" class="form-control" placeholder="Ex: Lucas Gabriel" required>
                   </div>
-                  <div class="form-group">
-                    <label class="form-label">E-mail de Acesso (Login) *</label>
-                    <input type="email" id="emp-email" class="form-control" placeholder="lucas@exemplo.com" required>
-                  </div>
+                  <!-- Email field removed for name-based login -->
                   <div class="form-group">
                     <label class="form-label">Senha Inicial (Mínimo 6 caracteres) *</label>
                     <input type="password" id="emp-password" class="form-control" placeholder="••••••••" minlength="6" required>
@@ -1547,13 +1544,7 @@
             <span>Sou eu (dono da empresa que também executa montagens)</span>
           </label>
           <div id="assembler-login-fields">
-            <div class="form-group">
-              <label class="form-label">E-mail de login deste montador</label>
-              <input type="email" id="assembler-email" class="form-control" placeholder="lucas@exemplo.com">
-              <small class="form-hint">
-                E-mail que o montador usará para entrar no sistema.
-              </small>
-            </div>
+            <!-- Email field removed for name-based login -->
             <div class="form-group" id="assembler-password-group">
               <label class="form-label">Senha de Acesso (Login)</label>
               <input type="password" id="assembler-password" class="form-control" placeholder="Mínimo 6 caracteres" minlength="6">
@@ -1696,10 +1687,10 @@
 
       <form id="login-form">
         <div class="form-group">
-          <label class="form-label">E-mail de Acesso</label>
+          <label class="form-label">Nome de Acesso (ou E-mail para Admin)</label>
           <div class="input-with-icon">
-            <i class="fa-regular fa-envelope"></i>
-            <input type="email" id="login-email" class="form-control" placeholder="seuemail@exemplo.com" required autocomplete="username">
+            <i class="fa-regular fa-user"></i>
+            <input type="text" id="login-email" class="form-control" placeholder="Seu nome completo" required autocomplete="username">
           </div>
         </div>
 
